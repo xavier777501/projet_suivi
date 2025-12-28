@@ -14,7 +14,8 @@ import {
     RefreshCw,
     Settings,
     Plus,
-    Layers
+    Layers,
+    Eye
 } from 'lucide-react';
 import CreateEspacePedagogique from '../forms/CreateEspacePedagogique';
 import CreateFormateur from '../forms/CreateFormateur';
