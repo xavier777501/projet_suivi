@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database.database import Base, engine, SessionLocal
 import models  # ensure all models are imported so tables are created
 from routes import auth
-# # from routes import gestion_comptes
+from routes import gestion_comptes
 from core.auth import initialiser_compte_de
 
 # Créer les tables
@@ -99,11 +99,11 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 # Inclure les routes de gestion des comptes
-# app.include_router(gestion_comptes.router)
+app.include_router(gestion_comptes.router)
 
 # Inclure les routes de dashboard
-# from routes import dashboard
-# app.include_router(dashboard.router)
+from routes import dashboard
+app.include_router(dashboard.router)
 
 # Inclure les routes d'espaces pédagogiques
 # from routes import espaces_pedagogiques
