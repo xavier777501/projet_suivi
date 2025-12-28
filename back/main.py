@@ -99,15 +99,16 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
 # Inclure les routes de gestion des comptes
+from routes import gestion_comptes
 app.include_router(gestion_comptes.router)
 
 # Inclure les routes de dashboard
 from routes import dashboard
-app.include_router(dashboard.router)
+app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 
 # Inclure les routes d'espaces pédagogiques
-# from routes import espaces_pedagogiques
-# app.include_router(espaces_pedagogiques.router)
+from routes import espaces_pedagogiques
+app.include_router(espaces_pedagogiques.router)
 
 @app.get("/")
 def home():

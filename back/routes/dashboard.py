@@ -1,117 +1,175 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
-from typing import Dict, Any, List
+from sqlalchemy import func, and_
 from datetime import datetime, date
+from typing import Dict, Any, List
 
 from database.database import get_db
-from models import (
-    Utilisateur, Formateur, Etudiant, Promotion, Filiere, 
-    EspacePedagogique, Travail, Assignation, Livraison,
-    RoleEnum, StatutEtudiantEnum, StatutAssignationEnum
-)
 from core.auth import get_current_user
-from utils.promotion_generator import lister_annees_disponibles
+from models import (
+    Utilisateur, RoleEnum, Filiere, Matiere, Promotion, 
+    Etudiant, Formateur, EspacePedagogique, Travail, 
+    Assignation, StatutAssignationEnum, StatutEtudiantEnum
+)
 
-router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
-
-# ==================== DASHBOARD DE ====================
+router = APIRouter()
 
 @router.get("/de")
-async def dashboard_de(
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_current_user)
+def get_de_dashboard(
+    current_user: Utilisateur = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Dashboard du Directeur d'Établissement"""
-    
+    """
+    Tableau de bord pour le Directeur d'Établissement
+    """
+    # Vérifier que l'utilisateur est bien un DE
     if current_user.role != RoleEnum.DE:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Accès réservé au Directeur d'Établissement"
         )
     
-    # Statistiques globales
-    total_formateurs = db.query(Formateur).count()
+    # 1. Statistiques générales
     total_etudiants = db.query(Etudiant).count()
-    total_promotions = db.query(Promotion).count()
-    total_filieres = db.query(Filiere).count()
-    
-    # Étudiants par statut
     etudiants_actifs = db.query(Etudiant).filter(Etudiant.statut == StatutEtudiantEnum.ACTIF).count()
-    etudiants_suspendus = db.query(Etudiant).filter(Etudiant.statut == StatutEtudiantEnum.SUSPENDU).count()
+    total_formateurs = db.query(Formateur).count()
+    total_filieres = db.query(Filiere).count()
+    total_promotions = db.query(Promotion).count()
+    total_espaces = db.query(EspacePedagogique).count()
+    total_travaux = db.query(Travail).count()
     
-    # Promotions récentes
-    promotions_recentes = db.query(Promotion).order_by(desc(Promotion.date_debut)).limit(5).all()
+    # 2. Répartition des étudiants par filière
+    repartition_filieres = db.query(
+        Filiere.nom_filiere,
+        func.count(Etudiant.id_etudiant).label('nombre_etudiants')
+    ).join(
+        Promotion, Filiere.id_filiere == Promotion.id_filiere
+    ).join(
+        Etudiant, Promotion.id_promotion == Etudiant.id_promotion
+    ).group_by(Filiere.nom_filiere).all()
     
-    # Années académiques disponibles
-    annees_disponibles = lister_annees_disponibles()
+    # 3. Activité récente (derniers travaux créés)
+    travaux_recents = db.query(
+        Travail.titre,
+        Travail.date_creation,
+        Matiere.nom_matiere,
+        Promotion.libelle.label('promotion')
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
+        Promotion, EspacePedagogique.id_promotion == Promotion.id_promotion
+    ).order_by(Travail.date_creation.desc()).limit(5).all()
     
-    # Activité récente (derniers comptes créés)
-    comptes_recents = db.query(Utilisateur).filter(
-        Utilisateur.role.in_([RoleEnum.FORMATEUR, RoleEnum.ETUDIANT])
-    ).order_by(desc(Utilisateur.date_creation)).limit(10).all()
+    # 4. Espaces pédagogiques sans formateur
+    espaces_sans_formateur = db.query(
+        EspacePedagogique.id_espace,
+        Matiere.nom_matiere,
+        Promotion.libelle.label('promotion')
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
+        Promotion, EspacePedagogique.id_promotion == Promotion.id_promotion
+    ).filter(EspacePedagogique.id_formateur.is_(None)).all()
+    
+    # 5. Statistiques des travaux
+    travaux_en_cours = db.query(Assignation).filter(
+        Assignation.statut == StatutAssignationEnum.EN_COURS
+    ).count()
+    
+    travaux_rendus = db.query(Assignation).filter(
+        Assignation.statut == StatutAssignationEnum.RENDU
+    ).count()
+    
+    travaux_notes = db.query(Assignation).filter(
+        Assignation.statut == StatutAssignationEnum.NOTE
+    ).count()
+    
+    # 6. Promotions actives (année académique en cours)
+    annee_actuelle = datetime.now().year
+    promotions_actives = db.query(
+        Promotion.libelle,
+        Promotion.annee_academique,
+        Filiere.nom_filiere,
+        func.count(Etudiant.id_etudiant).label('nombre_etudiants')
+    ).join(
+        Filiere, Promotion.id_filiere == Filiere.id_filiere
+    ).outerjoin(
+        Etudiant, Promotion.id_promotion == Etudiant.id_promotion
+    ).filter(
+        Promotion.annee_academique.like(f"%{annee_actuelle}%")
+    ).group_by(
+        Promotion.id_promotion, Promotion.libelle, 
+        Promotion.annee_academique, Filiere.nom_filiere
+    ).all()
     
     return {
-        "role": "DE",
-        "utilisateur": {
-            "nom": current_user.nom,
-            "prenom": current_user.prenom,
-            "email": current_user.email
-        },
-        "statistiques": {
-            "total_formateurs": total_formateurs,
+        "statistiques_generales": {
             "total_etudiants": total_etudiants,
-            "total_promotions": total_promotions,
-            "total_filieres": total_filieres,
             "etudiants_actifs": etudiants_actifs,
-            "etudiants_suspendus": etudiants_suspendus
+            "total_formateurs": total_formateurs,
+            "total_filieres": total_filieres,
+            "total_promotions": total_promotions,
+            "total_espaces": total_espaces,
+            "total_travaux": total_travaux
         },
-        "promotions_recentes": [
+        "repartition_filieres": [
             {
-                "id_promotion": p.id_promotion,
-                "libelle": p.libelle,
-                "annee_academique": p.annee_academique,
-                "date_debut": p.date_debut.isoformat(),
-                "date_fin": p.date_fin.isoformat()
-            } for p in promotions_recentes
+                "filiere": row.nom_filiere,
+                "nombre_etudiants": row.nombre_etudiants
+            }
+            for row in repartition_filieres
         ],
-        "annees_disponibles": annees_disponibles,
-        "comptes_recents": [
+        "activite_recente": [
             {
-                "identifiant": u.identifiant,
-                "nom": u.nom,
-                "prenom": u.prenom,
-                "email": u.email,
-                "role": u.role,
-                "date_creation": u.date_creation.isoformat(),
-                "actif": u.actif
-            } for u in comptes_recents
+                "titre": row.titre,
+                "date_creation": row.date_creation.isoformat(),
+                "matiere": row.nom_matiere,
+                "promotion": row.promotion
+            }
+            for row in travaux_recents
         ],
-        "actions_disponibles": [
-            "creer_formateur",
-            "creer_etudiant",
-            "gerer_promotions",
-            "voir_statistiques",
-            "configurer_systeme"
+        "espaces_sans_formateur": [
+            {
+                "id_espace": row.id_espace,
+                "matiere": row.nom_matiere,
+                "promotion": row.promotion
+            }
+            for row in espaces_sans_formateur
+        ],
+        "statistiques_travaux": {
+            "en_cours": travaux_en_cours,
+            "rendus": travaux_rendus,
+            "notes": travaux_notes,
+            "total": travaux_en_cours + travaux_rendus + travaux_notes
+        },
+        "promotions_actives": [
+            {
+                "libelle": row.libelle,
+                "annee_academique": row.annee_academique,
+                "filiere": row.nom_filiere,
+                "nombre_etudiants": row.nombre_etudiants or 0
+            }
+            for row in promotions_actives
         ]
     }
 
-# ==================== DASHBOARD FORMATEUR ====================
-
 @router.get("/formateur")
-async def dashboard_formateur(
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_current_user)
+def get_formateur_dashboard(
+    current_user: Utilisateur = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Dashboard du Formateur"""
-    
+    """
+    Tableau de bord pour le Formateur
+    """
     if current_user.role != RoleEnum.FORMATEUR:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Accès réservé aux formateurs"
+            detail="Accès réservé aux Formateurs"
         )
     
-    # Récupérer le profil formateur
+    # Récupérer le formateur
     formateur = db.query(Formateur).filter(Formateur.identifiant == current_user.identifiant).first()
     if not formateur:
         raise HTTPException(
@@ -120,102 +178,55 @@ async def dashboard_formateur(
         )
     
     # Mes espaces pédagogiques
-    espaces = db.query(EspacePedagogique).filter(
+    mes_espaces = db.query(
+        EspacePedagogique.id_espace,
+        Matiere.nom_matiere,
+        Promotion.libelle.label('promotion'),
+        func.count(Travail.id_travail).label('nombre_travaux')
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
+        Promotion, EspacePedagogique.id_promotion == Promotion.id_promotion
+    ).outerjoin(
+        Travail, EspacePedagogique.id_espace == Travail.id_espace
+    ).filter(
         EspacePedagogique.id_formateur == formateur.id_formateur
+    ).group_by(
+        EspacePedagogique.id_espace, Matiere.nom_matiere, Promotion.libelle
     ).all()
     
-    # Statistiques des espaces
-    total_espaces = len(espaces)
-    total_travaux = 0
-    total_etudiants = set()
-    
-    espaces_data = []
-    for espace in espaces:
-        # Compter les travaux de cet espace
-        travaux_espace = db.query(Travail).filter(Travail.id_espace == espace.id_espace).count()
-        total_travaux += travaux_espace
-        
-        # Compter les étudiants de la promotion
-        etudiants_promotion = db.query(Etudiant).filter(
-            Etudiant.id_promotion == espace.id_promotion
-        ).all()
-        
-        for etudiant in etudiants_promotion:
-            total_etudiants.add(etudiant.id_etudiant)
-        
-        espaces_data.append({
-            "id_espace": espace.id_espace,
-            "nom_matiere": espace.matiere.nom_matiere,
-            "description": espace.description,
-            "promotion": espace.promotion.libelle if espace.promotion else "N/A",
-            "nombre_travaux": travaux_espace,
-            "nombre_etudiants": len(etudiants_promotion),
-            "code_acces": espace.code_acces,
-            "date_creation": espace.date_creation.isoformat()
-        })
-    
-    # Travaux récents
-    travaux_recents = db.query(Travail).join(EspacePedagogique).filter(
-        EspacePedagogique.id_formateur == formateur.id_formateur
-    ).order_by(desc(Travail.date_creation)).limit(5).all()
-    
-    # Assignations en attente de correction
-    assignations_a_corriger = db.query(Assignation).join(Travail).join(EspacePedagogique).filter(
-        EspacePedagogique.id_formateur == formateur.id_formateur,
-        Assignation.statut == StatutAssignationEnum.RENDU
-    ).count()
-    
     return {
-        "role": "FORMATEUR",
-        "utilisateur": {
+        "formateur": {
             "nom": current_user.nom,
             "prenom": current_user.prenom,
-            "email": current_user.email,
-            "numero_employe": formateur.numero_employe,
-            "specialite": formateur.matiere.nom_matiere if formateur.matiere else None
+            "matiere": formateur.matiere.nom_matiere if formateur.matiere else None
         },
-        "statistiques": {
-            "total_espaces": total_espaces,
-            "total_travaux": total_travaux,
-            "total_etudiants": len(total_etudiants),
-            "assignations_a_corriger": assignations_a_corriger
-        },
-        "espaces_pedagogiques": espaces_data,
-        "travaux_recents": [
+        "mes_espaces": [
             {
-                "id_travail": t.id_travail,
-                "titre": t.titre,
-                "type_travail": t.type_travail,
-                "date_echeance": t.date_echeance.isoformat(),
-                "espace": t.espace_pedagogique.matiere.nom_matiere,
-                "date_creation": t.date_creation.isoformat()
-            } for t in travaux_recents
-        ],
-        "actions_disponibles": [
-            "creer_espace_pedagogique",
-            "creer_travail",
-            "corriger_travaux",
-            "gerer_etudiants",
-            "voir_statistiques"
+                "id_espace": row.id_espace,
+                "matiere": row.nom_matiere,
+                "promotion": row.promotion,
+                "nombre_travaux": row.nombre_travaux or 0
+            }
+            for row in mes_espaces
         ]
     }
 
-# ==================== DASHBOARD ETUDIANT ====================
-
 @router.get("/etudiant")
-async def dashboard_etudiant(
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_current_user)
+def get_etudiant_dashboard(
+    current_user: Utilisateur = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
-    """Dashboard de l'Étudiant"""
-    
+    """
+    Tableau de bord pour l'Étudiant
+    """
     if current_user.role != RoleEnum.ETUDIANT:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Accès réservé aux étudiants"
+            detail="Accès réservé aux Étudiants"
         )
     
-    # Récupérer le profil étudiant
+    # Récupérer l'étudiant
     etudiant = db.query(Etudiant).filter(Etudiant.identifiant == current_user.identifiant).first()
     if not etudiant:
         raise HTTPException(
