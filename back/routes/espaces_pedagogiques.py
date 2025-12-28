@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
 from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel
@@ -8,8 +7,7 @@ from pydantic import BaseModel
 from database.database import get_db
 from models import (
     Utilisateur, Formateur, Etudiant, Filiere, Promotion,
-    EspacePedagogique, Travail, Assignation, Matiere, Inscription,
-    RoleEnum, TypeTravailEnum, StatutAssignationEnum
+    EspacePedagogique, Matiere, RoleEnum
 )
 from core.auth import get_current_user
 from utils.generators import generer_identifiant_unique
@@ -22,7 +20,6 @@ router = APIRouter(prefix="/api/espaces-pedagogiques", tags=["Espaces Pédagogiq
 class EspacePedagogiqueCreate(BaseModel):
     id_promotion: str
     id_matiere: str
-    id_formateur: Optional[str] = None
     description: Optional[str] = None
 
 # ==================== ROUTES DE ====================
@@ -33,7 +30,7 @@ async def creer_espace_pedagogique(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user)
 ):
-    """Créer un espace pédagogique (DE uniquement)"""
+    """Créer un espace pédagogique vide (DE uniquement) - US 3.1"""
     
     if current_user.role != RoleEnum.DE:
         raise HTTPException(
@@ -56,28 +53,18 @@ async def creer_espace_pedagogique(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Promotion non trouvée"
         )
-
-    # Vérifier formateur si fourni
-    formateur = None
-    if data.id_formateur:
-        formateur = db.query(Formateur).filter(Formateur.id_formateur == data.id_formateur).first()
-        if not formateur:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Formateur non trouvé"
-            )
     
     # Générer un code d'accès unique
     code_acces = secrets.token_urlsafe(6).upper()
     
-    # Créer l'espace pédagogique
+    # Créer l'espace pédagogique (sans formateur pour l'instant)
     id_espace = generer_identifiant_unique("ESPACE")
     espace = EspacePedagogique(
         id_espace=id_espace,
         id_promotion=data.id_promotion,
         id_matiere=data.id_matiere,
         description=data.description,
-        id_formateur=data.id_formateur,
+        id_formateur=None,
         code_acces=code_acces,
         date_creation=datetime.utcnow()
     )
@@ -85,10 +72,6 @@ async def creer_espace_pedagogique(
     db.add(espace)
     db.commit()
     db.refresh(espace)
-    
-    # Compter les étudiants (basé sur inscriptions ou promotion ?)
-    # Pour l'instant on initialise à 0 inscriptions
-    nb_etudiants = 0
     
     return {
         "message": "Espace pédagogique créé avec succès",
@@ -100,8 +83,8 @@ async def creer_espace_pedagogique(
             "code_acces": espace.code_acces,
             "promotion": promotion.libelle,
             "filiere": promotion.filiere.nom_filiere,
-            "formateur": f"{formateur.prenom} {formateur.nom}" if formateur else None,
-            "nb_etudiants": nb_etudiants
+            "formateur": "Non assigné",
+            "nb_etudiants": 0
         }
     }
 
@@ -110,7 +93,7 @@ async def lister_espaces_pedagogiques(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user)
 ):
-    """Lister tous les espaces pédagogiques (DE uniquement)"""
+    """Lister tous les espaces pédagogiques (DE uniquement) - US 3.1"""
     
     if current_user.role != RoleEnum.DE:
         raise HTTPException(
@@ -122,18 +105,6 @@ async def lister_espaces_pedagogiques(
     
     result = []
     for espace in espaces:
-        nb_etudiants = db.query(Etudiant).filter(
-            Etudiant.id_promotion == espace.id_promotion
-        ).count()
-        
-        nb_travaux = db.query(Travail).filter(
-            Travail.id_espace == espace.id_espace
-        ).count()
-        
-        nom_formateur = "Non assigné"
-        if espace.formateur and espace.formateur.utilisateur:
-            nom_formateur = f"{espace.formateur.utilisateur.prenom} {espace.formateur.utilisateur.nom}"
-
         result.append({
             "id_espace": espace.id_espace,
             "id_promotion": espace.id_promotion,
@@ -142,9 +113,9 @@ async def lister_espaces_pedagogiques(
             "code_acces": espace.code_acces,
             "promotion": espace.promotion.libelle,
             "filiere": espace.promotion.filiere.nom_filiere,
-            "formateur": nom_formateur,
-            "nb_etudiants": nb_etudiants,
-            "nb_travaux": nb_travaux,
+            "formateur": "Non assigné",
+            "nb_etudiants": 0,
+            "nb_travaux": 0,
             "date_creation": espace.date_creation.isoformat()
         })
     

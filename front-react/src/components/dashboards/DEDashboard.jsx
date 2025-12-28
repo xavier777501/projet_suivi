@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { dashboardAPI, gestionComptesAPI, espacesPedagogiquesAPI } from '../../services/api';
-import { 
-    Users, 
-    GraduationCap, 
-    BookOpen, 
-    Building, 
-    FileText, 
+import {
+    Users,
+    GraduationCap,
+    BookOpen,
+    Building,
+    FileText,
     TrendingUp,
     AlertTriangle,
     Calendar,
@@ -17,6 +17,8 @@ import {
     Layers
 } from 'lucide-react';
 import CreateEspacePedagogique from '../forms/CreateEspacePedagogique';
+import CreateFormateur from '../forms/CreateFormateur';
+import CreatePromotion from '../forms/CreatePromotion';
 import ManageEspace from '../forms/ManageEspace';
 import ConsultEspace from './ConsultEspace';
 import CircularChart from '../common/CircularChart';
@@ -25,11 +27,11 @@ import './DEDashboard.css';
 const DEDashboard = ({ onLogout }) => {
     const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'promotions' | 'espaces'
     const [dashboardData, setDashboardData] = useState(null);
-    
+
     // Data States
     const [promotions, setPromotions] = useState([]);
     const [espaces, setEspaces] = useState([]);
-    
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeModal, setActiveModal] = useState(null);
@@ -96,14 +98,14 @@ const DEDashboard = ({ onLogout }) => {
 
     const renderDashboard = () => {
         if (!dashboardData) return null;
-        
-        const { 
-            statistiques_generales, 
-            repartition_filieres, 
-            activite_recente, 
+
+        const {
+            statistiques_generales,
+            repartition_filieres,
+            activite_recente,
             espaces_sans_formateur,
             statistiques_travaux,
-            promotions_actives 
+            promotions_actives
         } = dashboardData;
 
         return (
@@ -192,8 +194,8 @@ const DEDashboard = ({ onLogout }) => {
                                                     <span className="filiere-count">{filiere.nombre_etudiants} étudiants</span>
                                                 </div>
                                                 <div className="filiere-bar">
-                                                    <div 
-                                                        className="filiere-progress" 
+                                                    <div
+                                                        className="filiere-progress"
                                                         style={{
                                                             width: `${(filiere.nombre_etudiants / Math.max(...repartition_filieres.map(f => f.nombre_etudiants))) * 100}%`
                                                         }}
@@ -389,26 +391,7 @@ const DEDashboard = ({ onLogout }) => {
                             <p><strong>Étudiants inscrits:</strong> {espace.nb_etudiants}</p>
                             <p><strong>Code d'accès:</strong> <code>{espace.code_acces}</code></p>
                         </div>
-                        <div className="card-actions-espace">
-                            <button 
-                                className="btn btn-sm btn-outline"
-                                onClick={() => {
-                                    setSelectedEspace(espace);
-                                    setActiveModal('manage_espace');
-                                }}
-                            >
-                                <Settings size={16} /> Gérer
-                            </button>
-                            <button 
-                                className="btn btn-sm btn-primary"
-                                onClick={() => {
-                                    setSelectedEspace(espace);
-                                    setActiveModal('consult_espace');
-                                }}
-                            >
-                                <TrendingUp size={16} /> Consulter
-                            </button>
-                        </div>
+
                     </div>
                 ))}
                 {espaces.length === 0 && <div className="text-center w-full">Aucun espace pédagogique créé.</div>}
@@ -429,6 +412,14 @@ const DEDashboard = ({ onLogout }) => {
                         </div>
                     </div>
                     <div className="header-actions">
+                        <button className="btn btn-primary" onClick={() => setActiveModal('formateur')}>
+                            <Plus size={16} />
+                            Nouveau Formateur
+                        </button>
+                        <button className="btn btn-green" onClick={() => setActiveModal('promotion')}>
+                            <Plus size={16} />
+                            Nouvelle Promotion
+                        </button>
                         <button onClick={loadData} className="btn btn-secondary">
                             <RefreshCw size={16} />
                             Actualiser
@@ -443,21 +434,21 @@ const DEDashboard = ({ onLogout }) => {
 
             {/* Navigation par onglets */}
             <nav className="dashboard-nav">
-                <button 
+                <button
                     className={`nav-tab ${activeTab === 'dashboard' ? 'active' : ''}`}
                     onClick={() => setActiveTab('dashboard')}
                 >
                     <BarChart3 size={18} />
                     Tableau de bord
                 </button>
-                <button 
+                <button
                     className={`nav-tab ${activeTab === 'promotions' ? 'active' : ''}`}
                     onClick={() => setActiveTab('promotions')}
                 >
                     <GraduationCap size={18} />
                     Promotions
                 </button>
-                <button 
+                <button
                     className={`nav-tab ${activeTab === 'espaces' ? 'active' : ''}`}
                     onClick={() => setActiveTab('espaces')}
                 >
@@ -500,30 +491,25 @@ const DEDashboard = ({ onLogout }) => {
 
             {/* Modals */}
             {activeModal === 'create_espace' && (
-                <CreateEspacePedagogique 
-                    onClose={() => setActiveModal(null)} 
-                    onSuccess={handleCreateSuccess} 
-                />
-            )}
-
-            {activeModal === 'manage_espace' && selectedEspace && (
-                <ManageEspace
-                    espace={selectedEspace}
-                    onClose={() => {
-                        setActiveModal(null);
-                        setSelectedEspace(null);
-                    }}
+                <CreateEspacePedagogique
+                    onClose={() => setActiveModal(null)}
                     onSuccess={handleCreateSuccess}
                 />
             )}
 
-            {activeModal === 'consult_espace' && selectedEspace && (
-                <ConsultEspace
-                    espace={selectedEspace}
-                    onClose={() => {
-                        setActiveModal(null);
-                        setSelectedEspace(null);
-                    }}
+
+
+            {activeModal === 'formateur' && (
+                <CreateFormateur
+                    onClose={() => setActiveModal(null)}
+                    onSuccess={handleCreateSuccess}
+                />
+            )}
+
+            {activeModal === 'promotion' && (
+                <CreatePromotion
+                    onClose={() => setActiveModal(null)}
+                    onSuccess={handleCreateSuccess}
                 />
             )}
         </div>
