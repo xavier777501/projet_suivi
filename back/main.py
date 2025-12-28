@@ -85,7 +85,13 @@ initialiser_systeme()
 
 app = FastAPI()
 
-origins = ["*"]
+# Configuration CORS robuste
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -95,10 +101,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Inclure les routes d'authentification
+# Inclure les routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 
-# Inclure les routes de gestion des comptes
 from routes import gestion_comptes
 app.include_router(gestion_comptes.router)
 

@@ -12,7 +12,8 @@
 }
 
 .modal-content {
-  background: white;
+  background: white !important;
+  color: #1f2937 !important;
   border-radius: 12px;
   width: 90%;
   max-width: 500px;
@@ -38,7 +39,7 @@
     margin: 0;
     border-radius: 0;
   }
-  
+
   .modal-overlay {
     padding: 0;
   }
@@ -110,7 +111,13 @@
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 0.875rem;
+  color: #1f2937 !important;
+  background-color: white !important;
   transition: border-color 0.2s;
+}
+
+.form-group input::placeholder {
+  color: #9ca3af !important;
 }
 
 .form-group input:focus,
