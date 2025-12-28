@@ -1,0 +1,45 @@
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bar-container {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bar-background {
+  position: absolute;
+  bottom: 0;
+  opacity: 0.2;
+}
+
+.bar-fill {
+  position: absolute;
+  bottom: 0;
+  transition: height 0.8s ease-in-out;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.bar-value {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bar-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+  font-weight: 500;
+  max-width: 80px;
+  line-height: 1.2;
+}
