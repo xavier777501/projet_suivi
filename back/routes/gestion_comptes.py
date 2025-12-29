@@ -1,11 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from datetime import datetime
-from typing import List
+from datetime import datetime, timedelta
+from typing import Dict, Any
 
 from database.database import get_db
-from models import Utilisateur, Formateur, Etudiant, Promotion, Filiere, Matiere, RoleEnum
-from core.auth import get_current_user
+from models import Utilisateur, Formateur, Etudiant, Promotion, Filiere, Matiere, RoleEnum, StatutEtudiantEnum
+import models
+from core.auth import get_password_hash as hash_password, get_current_user
+from utils.generators import (
+    generer_identifiant_unique, 
+    generer_mot_de_passe_aleatoire, 
+    generer_token_activation,
+    generer_matricule_unique,
+    generer_numero_employe
+)
+from utils.email_service import email_service
 
 router = APIRouter(prefix="/api/gestion-comptes", tags=["Gestion des comptes"])
 
@@ -17,14 +26,6 @@ class FormateurCreate(BaseModel):
     nom: str
     prenom: str
     id_matiere: str = None
-
-from utils.generators import (
-    generer_identifiant_unique, 
-    generer_mot_de_passe_aleatoire, 
-    generer_numero_employe
-)
-from core.auth import get_password_hash as hash_password
-from utils.email_service import email_service
 
 @router.post("/creer-formateur", status_code=status.HTTP_201_CREATED)
 async def creer_compte_formateur(
@@ -213,17 +214,37 @@ async def creer_compte_etudiant(
     current_user: Utilisateur = Depends(get_current_user)
 ):
     """Route pour créer un compte étudiant (réservée au DE)"""
-    if current_user.role != RoleEnum.DE:
-        raise HTTPException(status_code=403, detail="Accès réservé au DE")
     
+    # Vérifier que l'utilisateur actuel est un DE
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Seul un Directeur d'Établissement peut créer des comptes étudiants"
+        )
+    
+    # 1. Validation des données
     email_existant = db.query(Utilisateur).filter(Utilisateur.email == etudiant_data.email).first()
     if email_existant:
-        raise HTTPException(status_code=400, detail="Email déjà utilisé")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cet email est déjà utilisé"
+        )
     
+    # Vérifier que la promotion existe
+    promotion = db.query(Promotion).filter(Promotion.id_promotion == etudiant_data.id_promotion).first()
+    if not promotion:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Promotion introuvable"
+        )
+    
+    # 2. Génération automatique
     identifiant = generer_identifiant_unique("ETUDIANT")
     mot_de_passe = generer_mot_de_passe_aleatoire()
     id_etudiant = generer_identifiant_unique("ETUDIANT")
+    matricule = generer_matricule_unique()
     
+    # 3. Création utilisateur
     nouvel_utilisateur = Utilisateur(
         identifiant=identifiant,
         email=etudiant_data.email,
@@ -232,25 +253,37 @@ async def creer_compte_etudiant(
         prenom=etudiant_data.prenom,
         role=RoleEnum.ETUDIANT,
         actif=True,
+        token_activation=None,
+        date_expiration_token=None,
         mot_de_passe_temporaire=True
     )
     
+    # 4. Création étudiant
     nouvel_etudiant = Etudiant(
         id_etudiant=id_etudiant,
         identifiant=identifiant,
-        id_promotion=etudiant_data.id_promotion,
+        matricule=matricule,
+        id_promotion=promotion.id_promotion,
+        date_inscription=datetime.utcnow().date(),
         statut=StatutEtudiantEnum.ACTIF
     )
     
+    # 5. Sauvegarde en base
     try:
         db.add(nouvel_utilisateur)
         db.add(nouvel_etudiant)
         db.commit()
+        db.refresh(nouvel_utilisateur)
+        db.refresh(nouvel_etudiant)
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la création du compte: {str(e)}"
+        )
     
-    email_service.envoyer_email_creation_compte(
+    # 6. Envoi email avec identifiants
+    email_envoye = email_service.envoyer_email_creation_compte(
         destinataire=etudiant_data.email,
         prenom=etudiant_data.prenom,
         email=etudiant_data.email,
@@ -258,7 +291,13 @@ async def creer_compte_etudiant(
         role="ETUDIANT"
     )
     
-    return {"message": "Succès", "identifiant": identifiant}
+    return {
+        "message": "Compte étudiant créé avec succès",
+        "email_envoye": email_envoye,
+        "identifiant": identifiant,
+        "id_etudiant": id_etudiant,
+        "matricule": matricule
+    }
 
 class PromotionCreate(BaseModel):
     id_filiere: str

@@ -188,6 +188,15 @@
   background: #2563eb;
 }
 
+.btn-blue {
+  background: #1e40af;
+  color: white;
+}
+
+.btn-blue:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
 .loading-select {
   padding: 0.75rem;
   color: #6b7280;
