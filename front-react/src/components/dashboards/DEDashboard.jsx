@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import CreateEspacePedagogique from '../forms/CreateEspacePedagogique';
 import CreateFormateur from '../forms/CreateFormateur';
+import CreateEtudiant from '../forms/CreateEtudiant';
 import CreatePromotion from '../forms/CreatePromotion';
 import ManageEspace from '../forms/ManageEspace';
 import ConsultEspace from './ConsultEspace';
@@ -417,6 +418,10 @@ const DEDashboard = ({ onLogout }) => {
                             <Plus size={16} />
                             Nouveau Formateur
                         </button>
+                        <button className="btn btn-blue" onClick={() => setActiveModal('etudiant')}>
+                            <Plus size={16} />
+                            Nouvel Étudiant
+                        </button>
                         <button className="btn btn-green" onClick={() => setActiveModal('promotion')}>
                             <Plus size={16} />
                             Nouvelle Promotion
@@ -502,6 +507,13 @@ const DEDashboard = ({ onLogout }) => {
 
             {activeModal === 'formateur' && (
                 <CreateFormateur
+                    onClose={() => setActiveModal(null)}
+                    onSuccess={handleCreateSuccess}
+                />
+            )}
+
+            {activeModal === 'etudiant' && (
+                <CreateEtudiant
                     onClose={() => setActiveModal(null)}
                     onSuccess={handleCreateSuccess}
                 />
