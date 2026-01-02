@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from database.database import get_db
 from models import (
     Utilisateur, Formateur, Etudiant, Filiere, Promotion,
-    EspacePedagogique, Matiere, RoleEnum
+    EspacePedagogique, Matiere, Inscription, RoleEnum
 )
 from core.auth import get_current_user
 from utils.generators import generer_identifiant_unique
@@ -21,6 +21,12 @@ class EspacePedagogiqueCreate(BaseModel):
     id_promotion: str
     id_matiere: str
     description: Optional[str] = None
+
+class AssignFormateurRequest(BaseModel):
+    id_formateur: Optional[str] = None
+
+class AddEtudiantsRequest(BaseModel):
+    etudiants_ids: List[str]
 
 # ==================== ROUTES DE ====================
 
@@ -120,3 +126,95 @@ async def lister_espaces_pedagogiques(
         })
     
     return {"espaces": result, "total": len(result)}
+
+# ==================== ROUTES GESTION ESPACE ====================
+
+@router.put("/{id_espace}/formateur")
+async def assigner_formateur_espace(
+    id_espace: str,
+    data: AssignFormateurRequest,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Assigner ou retirer un formateur d'un espace (DE uniquement)"""
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(status_code=403, detail="Accès réservé au DE")
+
+    espace = db.query(EspacePedagogique).filter(EspacePedagogique.id_espace == id_espace).first()
+    if not espace:
+        raise HTTPException(status_code=404, detail="Espace non trouvé")
+        
+    if data.id_formateur:
+        formateur = db.query(Formateur).filter(Formateur.id_formateur == data.id_formateur).first()
+        if not formateur:
+            raise HTTPException(status_code=404, detail="Formateur non trouvé")
+        espace.id_formateur = data.id_formateur
+    else:
+        # Désassigner le formateur
+        espace.id_formateur = None
+
+    db.commit()
+    
+    return {"message": "Formateur mis à jour avec succès"}
+
+@router.post("/{id_espace}/etudiants")
+async def ajouter_etudiants_espace(
+    id_espace: str,
+    data: AddEtudiantsRequest,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Ajouter des étudiants à un espace (DE uniquement)"""
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(status_code=403, detail="Accès réservé au DE")
+
+    espace = db.query(EspacePedagogique).filter(EspacePedagogique.id_espace == id_espace).first()
+    if not espace:
+        raise HTTPException(status_code=404, detail="Espace non trouvé")
+
+    count = 0
+    for id_etudiant in data.etudiants_ids:
+        # Vérifier si déjà inscrit
+        exists = db.query(Inscription).filter(
+            Inscription.id_espace == id_espace,
+            Inscription.id_etudiant == id_etudiant
+        ).first()
+        
+        if not exists:
+            # Vérifier que l'étudiant existe
+            etudiant = db.query(Etudiant).filter(Etudiant.id_etudiant == id_etudiant).first()
+            if etudiant:
+                inscription = Inscription(
+                    id_inscription=generer_identifiant_unique("INS"),
+                    id_espace=id_espace,
+                    id_etudiant=id_etudiant,
+                    date_inscription=datetime.utcnow()
+                )
+                db.add(inscription)
+                count += 1
+    
+    db.commit()
+    return {"message": f"{count} étudiant(s) ajouté(s) avec succès"}
+
+@router.get("/promotion/{id_promotion}/etudiants")
+async def lister_etudiants_candidats(
+    id_promotion: str,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Lister les étudiants d'une promotion pour sélection (DE)"""
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(status_code=403, detail="Accès réservé au DE")
+        
+    etudiants = db.query(Etudiant).filter(Etudiant.id_promotion == id_promotion).all()
+    
+    return {
+        "etudiants": [
+            {
+                "id_etudiant": e.id_etudiant,
+                "nom": e.utilisateur.nom,
+                "prenom": e.utilisateur.prenom,
+                "email": e.utilisateur.email
+            } for e in etudiants if e.utilisateur
+        ]
+    }

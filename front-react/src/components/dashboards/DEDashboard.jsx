@@ -393,6 +393,28 @@ const DEDashboard = ({ onLogout }) => {
                             <p><strong>Étudiants inscrits:</strong> {espace.nb_etudiants}</p>
                             <p><strong>Code d'accès:</strong> <code>{espace.code_acces}</code></p>
                         </div>
+                        <div className="card-actions-espace">
+                            <button 
+                                className="btn btn-primary btn-sm"
+                                onClick={() => {
+                                    setSelectedEspace(espace);
+                                    setActiveModal('manage_espace');
+                                }}
+                            >
+                                <Settings size={14} />
+                                Gérer
+                            </button>
+                            <button 
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => {
+                                    setSelectedEspace(espace);
+                                    setActiveModal('consult_espace');
+                                }}
+                            >
+                                <Eye size={14} />
+                                Consulter
+                            </button>
+                        </div>
 
                     </div>
                 ))}
@@ -500,6 +522,21 @@ const DEDashboard = ({ onLogout }) => {
                 <CreateEspacePedagogique
                     onClose={() => setActiveModal(null)}
                     onSuccess={handleCreateSuccess}
+                />
+            )}
+
+            {activeModal === 'manage_espace' && selectedEspace && (
+                <ManageEspace
+                    espace={selectedEspace}
+                    onClose={() => setActiveModal(null)}
+                    onSuccess={handleCreateSuccess}
+                />
+            )}
+
+            {activeModal === 'consult_espace' && selectedEspace && (
+                <ConsultEspace
+                    espace={selectedEspace}
+                    onClose={() => setActiveModal(null)}
                 />
             )}
 
