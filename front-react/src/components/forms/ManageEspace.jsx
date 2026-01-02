@@ -6,7 +6,6 @@ import './CreateFormateur.css';
 const ManageEspace = ({ espace, onClose, onSuccess }) => {
   const [formateurs, setFormateurs] = useState([]);
   const [etudiants, setEtudiants] = useState([]);
-  const [etudiantsInscrits, setEtudiantsInscrits] = useState([]);
   const [selectedFormateur, setSelectedFormateur] = useState(espace.id_formateur || '');
   const [selectedEtudiants, setSelectedEtudiants] = useState([]);
   
