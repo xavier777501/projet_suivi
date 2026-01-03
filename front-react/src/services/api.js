@@ -104,12 +104,8 @@ export const espacesPedagogiquesAPI = {
   // Formateur - Mes espaces
   mesEspaces: () => api.get('/api/espaces-pedagogiques/mes-espaces'),
   listerEtudiantsEspace: (idEspace) => api.get(`/api/espaces-pedagogiques/espace/${idEspace}/etudiants`),
-};
 
   // DE - Gestion avancée espace
-  assignerFormateur: (idEspace, idFormateur) => api.put(`/api/espaces-pedagogiques/${idEspace}/formateur`, { id_formateur: idFormateur }),
-  ajouterEtudiants: (idEspace, etudiantsIds) => api.post(`/api/espaces-pedagogiques/${idEspace}/etudiants`, { etudiants_ids: etudiantsIds }),
-  listerEtudiantsCandidats: (idPromotion) => api.get(`/api/espaces-pedagogiques/promotion/${idPromotion}/etudiants`),
   getEspaceDetails: (idEspace) => api.get(`/api/espaces-pedagogiques/${idEspace}/details`),
 
   creerTravail: (data) => api.post('/api/espaces-pedagogiques/travaux/creer', data),
