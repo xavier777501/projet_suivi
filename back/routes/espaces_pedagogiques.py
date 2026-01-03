@@ -218,3 +218,4 @@ async def lister_etudiants_candidats(
             } for e in etudiants if e.utilisateur
         ]
     }
+
