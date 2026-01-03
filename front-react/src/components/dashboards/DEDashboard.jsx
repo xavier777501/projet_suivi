@@ -22,7 +22,7 @@ import CreateFormateur from '../forms/CreateFormateur';
 import CreateEtudiant from '../forms/CreateEtudiant';
 import CreatePromotion from '../forms/CreatePromotion';
 import ManageEspace from '../forms/ManageEspace';
-import ConsultEspace from './ConsultEspace';
+
 import CircularChart from '../common/CircularChart';
 import './DEDashboard.css';
 
@@ -394,7 +394,7 @@ const DEDashboard = ({ onLogout }) => {
                             <p><strong>Code d'accès:</strong> <code>{espace.code_acces}</code></p>
                         </div>
                         <div className="card-actions-espace">
-                            <button 
+                            <button
                                 className="btn btn-primary btn-sm"
                                 onClick={() => {
                                     setSelectedEspace(espace);
@@ -404,16 +404,7 @@ const DEDashboard = ({ onLogout }) => {
                                 <Settings size={14} />
                                 Gérer
                             </button>
-                            <button 
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => {
-                                    setSelectedEspace(espace);
-                                    setActiveModal('consult_espace');
-                                }}
-                            >
-                                <Eye size={14} />
-                                Consulter
-                            </button>
+
                         </div>
 
                     </div>
@@ -533,12 +524,7 @@ const DEDashboard = ({ onLogout }) => {
                 />
             )}
 
-            {activeModal === 'consult_espace' && selectedEspace && (
-                <ConsultEspace
-                    espace={selectedEspace}
-                    onClose={() => setActiveModal(null)}
-                />
-            )}
+
 
 
 
