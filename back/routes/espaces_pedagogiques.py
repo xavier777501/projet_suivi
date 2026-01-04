@@ -219,3 +219,129 @@ async def lister_etudiants_candidats(
         ]
     }
 
+# ==================== ROUTE CONSULTATION STATISTIQUES ====================
+
+@router.get("/{id_espace}/statistiques")
+async def consulter_statistiques_espace(
+    id_espace: str,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Consulter les statistiques détaillées d'un espace pédagogique (DE uniquement)"""
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(status_code=403, detail="Accès réservé au DE")
+
+    # Vérifier que l'espace existe
+    espace = db.query(EspacePedagogique).filter(EspacePedagogique.id_espace == id_espace).first()
+    if not espace:
+        raise HTTPException(status_code=404, detail="Espace pédagogique non trouvé")
+
+    # Informations générales de l'espace
+    formateur_info = None
+    if espace.id_formateur:
+        formateur = db.query(Formateur).filter(Formateur.id_formateur == espace.id_formateur).first()
+        if formateur and formateur.utilisateur:
+            formateur_info = {
+                "nom": formateur.utilisateur.nom,
+                "prenom": formateur.utilisateur.prenom,
+                "email": formateur.utilisateur.email,
+                "numero_employe": formateur.numero_employe
+            }
+
+    # Statistiques des étudiants inscrits
+    inscriptions = db.query(Inscription).filter(Inscription.id_espace == id_espace).all()
+    nb_etudiants_inscrits = len(inscriptions)
+    
+    etudiants_details = []
+    for inscription in inscriptions:
+        if inscription.etudiant and inscription.etudiant.utilisateur:
+            etudiants_details.append({
+                "nom": inscription.etudiant.utilisateur.nom,
+                "prenom": inscription.etudiant.utilisateur.prenom,
+                "email": inscription.etudiant.utilisateur.email,
+                "matricule": inscription.etudiant.matricule,
+                "date_inscription": inscription.date_inscription.isoformat(),
+                "statut": inscription.etudiant.statut
+            })
+
+    # Statistiques des travaux (si le modèle Travail existe)
+    try:
+        from models import Travail, Assignation, StatutAssignationEnum
+        
+        travaux = db.query(Travail).filter(Travail.id_espace == id_espace).all()
+        nb_travaux = len(travaux)
+        
+        # Statistiques des assignations
+        assignations_stats = {
+            "total": 0,
+            "assignees": 0,
+            "en_cours": 0,
+            "rendues": 0,
+            "notees": 0
+        }
+        
+        travaux_details = []
+        for travail in travaux:
+            assignations = db.query(Assignation).filter(Assignation.id_travail == travail.id_travail).all()
+            
+            assignations_travail = {
+                "assignees": len([a for a in assignations if a.statut == StatutAssignationEnum.ASSIGNE]),
+                "en_cours": len([a for a in assignations if a.statut == StatutAssignationEnum.EN_COURS]),
+                "rendues": len([a for a in assignations if a.statut == StatutAssignationEnum.RENDU]),
+                "notees": len([a for a in assignations if a.statut == StatutAssignationEnum.NOTE])
+            }
+            
+            assignations_stats["total"] += len(assignations)
+            assignations_stats["assignees"] += assignations_travail["assignees"]
+            assignations_stats["en_cours"] += assignations_travail["en_cours"]
+            assignations_stats["rendues"] += assignations_travail["rendues"]
+            assignations_stats["notees"] += assignations_travail["notees"]
+            
+            travaux_details.append({
+                "titre": travail.titre,
+                "description": travail.description,
+                "type_travail": travail.type_travail,
+                "date_creation": travail.date_creation.isoformat(),
+                "date_echeance": travail.date_echeance.isoformat() if travail.date_echeance else None,
+                "note_max": float(travail.note_max) if travail.note_max else None,
+                "assignations": assignations_travail
+            })
+            
+    except ImportError:
+        # Si les modèles Travail/Assignation n'existent pas encore
+        nb_travaux = 0
+        assignations_stats = {
+            "total": 0,
+            "assignees": 0,
+            "en_cours": 0,
+            "rendues": 0,
+            "notees": 0
+        }
+        travaux_details = []
+
+    return {
+        "espace": {
+            "id_espace": espace.id_espace,
+            "description": espace.description,
+            "code_acces": espace.code_acces,
+            "date_creation": espace.date_creation.isoformat(),
+            "matiere": {
+                "nom": espace.matiere.nom_matiere,
+                "description": espace.matiere.description
+            },
+            "promotion": {
+                "libelle": espace.promotion.libelle,
+                "annee_academique": espace.promotion.annee_academique,
+                "filiere": espace.promotion.filiere.nom_filiere
+            },
+            "formateur": formateur_info
+        },
+        "statistiques": {
+            "nb_etudiants_inscrits": nb_etudiants_inscrits,
+            "nb_travaux": nb_travaux,
+            "assignations": assignations_stats
+        },
+        "etudiants": etudiants_details,
+        "travaux": travaux_details
+    }
+

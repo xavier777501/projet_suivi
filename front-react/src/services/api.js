@@ -106,6 +106,7 @@ export const espacesPedagogiquesAPI = {
   listerEtudiantsEspace: (idEspace) => api.get(`/api/espaces-pedagogiques/espace/${idEspace}/etudiants`),
 
   // DE - Gestion avancée espace
+  consulterStatistiques: (idEspace) => api.get(`/api/espaces-pedagogiques/${idEspace}/statistiques`),
 
 
   creerTravail: (data) => api.post('/api/espaces-pedagogiques/travaux/creer', data),
