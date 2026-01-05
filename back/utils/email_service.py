@@ -71,7 +71,7 @@ class EmailService:
         }
         
         try:
-            print(f"🚀 Appel API Brevo pour {destinataire}...", flush=True)
+            print(f"🚀 Appel API Brevo de <{self.email_sender}> vers <{destinataire}>...", flush=True)
             with httpx.Client() as client:
                 response = client.post(self.api_url, headers=headers, json=payload, timeout=10)
                 

@@ -60,8 +60,8 @@ class Utilisateur(Base):
     mot_de_passe_temporaire = Column(Boolean, nullable=False, default=False)  # ← AJOUTÉ pour gérer le DE
 
     # Relations : un utilisateur a 0 ou 1 rôle spécifique
-    etudiant = relationship("Etudiant", back_populates="utilisateur", uselist=False)
-    formateur = relationship("Formateur", back_populates="utilisateur", uselist=False)
+    etudiant = relationship("Etudiant", back_populates="utilisateur", uselist=False, cascade="all, delete-orphan")
+    formateur = relationship("Formateur", back_populates="utilisateur", uselist=False, cascade="all, delete-orphan")
     # ⚠️ Le DE n'a PAS de relation vers Formateur ou Etudiant
 
 
