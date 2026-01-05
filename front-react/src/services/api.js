@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://projet-suivi-1.onrender.com';
+console.log('API Base URL used by Frontend:', API_BASE_URL);
 
 // Instance axios avec configuration de base
 const api = axios.create({
