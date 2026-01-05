@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+import os
 
 from models import Utilisateur, TentativeConnexion, RoleEnum
 from database.database import get_db
