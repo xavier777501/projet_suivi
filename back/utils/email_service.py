@@ -8,7 +8,7 @@ class EmailService:
     def __init__(self):
         # Utilise les variables d'environnement de Render ou les valeurs par défaut (insecure pour la prod mais permet le secours)
         self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        self.smtp_port = int(os.getenv("SMTP_PORT", "465"))
         self.email_sender = os.getenv("EMAIL_SENDER", "tfxyesu@gmail.com")
         self.email_password = os.getenv("EMAIL_PASSWORD", "ybbc zyld mxbj olui")
     
