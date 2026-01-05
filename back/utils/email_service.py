@@ -9,7 +9,7 @@ class EmailService:
         # Configuration Brevo API (La clé doit être dans BREVO_API_KEY sur Render)
         self.api_key = os.getenv("BREVO_API_KEY")
         self.api_url = "https://api.brevo.com/v3/smtp/email"
-        self.email_sender = os.getenv("EMAIL_SENDER", "tfxyesu@gmail.com")
+        self.email_sender = os.getenv("EMAIL_SENDER", "xaviertchalla4@gmail.com")
         self.sender_name = "Administration UATM"
         
     def tester_connectivite(self) -> Dict[str, bool]:
