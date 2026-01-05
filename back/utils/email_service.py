@@ -6,19 +6,16 @@ import os
 
 class EmailService:
     def __init__(self):
-        self.smtp_server = "smtp.gmail.com"
-        self.smtp_port = 587
-        self.email_sender = "tfxyesu@gmail.com"
-        # Pour Gmail, il faut utiliser un "App Password" pas le mot de passe normal
-        self.email_password = "ybbc zyld mxbj olui"  # Mot de passe d'application Gmail
-    
-    def configurer_mot_de_passe(self, mot_de_passe: str):
-        """Configure le mot de passe pour l'envoi d'emails"""
-        self.email_password = mot_de_passe
+        # Utilise les variables d'environnement de Render ou les valeurs par défaut (insecure pour la prod mais permet le secours)
+        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
+        self.email_sender = os.getenv("EMAIL_SENDER", "tfxyesu@gmail.com")
+        self.email_password = os.getenv("EMAIL_PASSWORD", "ybbc zyld mxbj olui")
     
     def envoyer_email_creation_compte(self, destinataire: str, prenom: str, 
                                      email: str, mot_de_passe: str, role: str) -> bool:
         """Envoie un email de création de compte avec identifiants"""
+        print(f"📧 Préparation de l'envoi d'email à {destinataire}...")
         try:
             # Création du message
             message = MIMEMultipart()
@@ -54,42 +51,38 @@ L'équipe administrative
             
             # Envoi de l'email
             if self.email_password:
-                server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+                print(f"📡 Connexion au serveur SMTP {self.smtp_server}:{self.smtp_port}...")
+                server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
                 server.starttls()
+                print(f"🔑 Tentative de connexion (Login) pour {self.email_sender}...")
                 server.login(self.email_sender, self.email_password)
+                print(f"📤 Envoi du message...")
                 server.send_message(message)
                 server.quit()
+                print(f"✅ Email envoyé avec succès à {destinataire} !")
                 return True
             else:
-                print("⚠️ Mot de passe email non configuré - Email non envoyé")
-                print(f"Destinataire: {destinataire}")
-                print(f"Email: {email}")
-                print(f"Mot de passe: {mot_de_passe}")
+                print("❌ ERREUR: Mot de passe email non configuré (EMAIL_PASSWORD manquant)")
                 return False
                 
         except Exception as e:
-            print(f"Erreur lors de l'envoi de l'email: {e}")
+            print(f"❌ ERREUR CRITIQUE lors de l'envoi de l'email: {e}")
+            import traceback
+            traceback.print_exc()
             return False
-
-    def envoyer_email_activation_compte(self, destinataire: str, prenom: str, 
-                                       identifiant: str, mot_de_passe: str, 
-                                       token_activation: str, role: str) -> bool:
-        """Ancienne méthode - conservée pour compatibilité"""
-        return self.envoyer_email_creation_compte(destinataire, prenom, destinataire, mot_de_passe, role)
 
     def envoyer_email_assignation_travail(self, destinataire: str, prenom: str,
                                          titre_travail: str, nom_matiere: str,
                                          formateur: str, date_echeance: str,
                                          description: str) -> bool:
         """Envoie un email de notification d'assignation de travail"""
+        print(f"📧 Notification Nouveau Travail pour {destinataire}...")
         try:
-            # Création du message
             message = MIMEMultipart()
             message["From"] = self.email_sender
             message["To"] = destinataire
             message["Subject"] = f"Nouveau travail assigné : {titre_travail}"
             
-            # Corps du message
             corps_message = f"""
 Bonjour {prenom},
 
@@ -119,34 +112,21 @@ L'équipe pédagogique
             
             message.attach(MIMEText(corps_message, "plain", "utf-8"))
             
-            # Envoi de l'email
             if self.email_password:
-                server = smtplib.SMTP(self.smtp_server, self.smtp_port)
+                server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
                 server.starttls()
                 server.login(self.email_sender, self.email_password)
                 server.send_message(message)
                 server.quit()
+                print(f"✅ Email de travail envoyé à {destinataire}")
                 return True
             else:
-                print("⚠️ Mot de passe email non configuré - Email non envoyé")
-                print(f"Destinataire: {destinataire}")
-                print(f"Travail: {titre_travail}")
+                print("❌ ERREUR: Mot de passe email non configuré")
                 return False
                 
         except Exception as e:
-            print(f"Erreur lors de l'envoi de l'email d'assignation: {e}")
+            print(f"❌ Erreur envoi email assignation: {e}")
             return False
-    
-    def envoyer_email_test(self) -> bool:
-        """Envoie un email de test pour vérifier la configuration"""
-        return self.envoyer_email_activation_compte(
-            destinataire="test@example.com",
-            prenom="Test",
-            identifiant="TEST_123",
-            mot_de_passe="TestPass123!",
-            token_activation="test_token_123",
-            role="TEST"
-        )
 
 # Instance globale du service email
 email_service = EmailService()
