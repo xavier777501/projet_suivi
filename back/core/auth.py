@@ -25,25 +25,29 @@ def generer_mot_de_passe_temporaire(longueur: int = 10) -> str:
 def initialiser_compte_de(db: Session) -> Optional[Dict[str, Any]]:
     """
     Initialise le compte DE s'il n'existe pas déjà
-    Si le compte existe mais avec un mauvais hash, le réinitialise correctement
-    Ne modifie JAMAIS le mot de passe si le compte existe déjà avec un hash correct
-    Retourne le compte DE existant ou le nouveau compte créé
+    Ajout d'un mécanisme de secours via FORCE_RESET_DE=true
     """
-    # Vérifier si un compte DE existe déjà
-    de_existant = db.query(Utilisateur).filter(Utilisateur.role == RoleEnum.DE).first()
+    de_existant = db.query(Utilisateur).filter(
+        and_(Utilisateur.role == RoleEnum.DE, Utilisateur.email == "de@genielogiciel.com")
+    ).first()
+    
+    force_reset = os.getenv("FORCE_RESET_DE", "false").lower() == "true"
     
     if de_existant:
-        print(f"Debug: Compte DE existant trouvé: {de_existant.email}")
-        print(f"Debug: Mot de passe temporaire: {de_existant.mot_de_passe_temporaire}")
-        
-        # Vérifier si le hash correspond à admin123 avec SHA-256
-        hash_attendu = get_password_hash("admin123")
-        if de_existant.mot_de_passe != hash_attendu and de_existant.mot_de_passe_temporaire:
-            print("Debug: Hash incorrect - Réinitialisation avec le bon hash SHA-256")
-            de_existant.mot_de_passe = hash_attendu
+        if force_reset:
+            print("⚠️ FORCE_RESET_DE détecté : Réinitialisation du mot de passe DE à 'admin123'")
+            de_existant.mot_de_passe = get_password_hash("admin123")
+            de_existant.mot_de_passe_temporaire = True
+            de_existant.actif = True
             db.commit()
-            print(f"Debug: Hash corrigé: {hash_attendu}")
+            print("✅ Mot de passe DE réinitialisé.")
         
+        # Correction automatique si le hash n'est pas au bon format (SHA-256 fait 64 char)
+        elif len(de_existant.mot_de_passe) != 64 and de_existant.mot_de_passe_temporaire:
+            print("Debug: Correction du format de hash temporaire...")
+            de_existant.mot_de_passe = get_password_hash("admin123")
+            db.commit()
+
         return {
             "identifiant": de_existant.identifiant,
             "email": de_existant.email,
