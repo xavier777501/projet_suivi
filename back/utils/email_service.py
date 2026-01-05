@@ -1,6 +1,7 @@
 import os
 import httpx
 import json
+from typing import Dict
 
 class EmailService:
     def __init__(self):
