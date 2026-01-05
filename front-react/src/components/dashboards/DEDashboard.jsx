@@ -69,13 +69,13 @@ const DEDashboard = ({ onLogout }) => {
     const handleCreateSuccess = async () => {
         const currentEspaceId = selectedEspace?.id_espace;
         setActiveModal(null);
-        
+
         // Recharger les données
         if (activeTab === 'espaces') {
             try {
                 const res = await espacesPedagogiquesAPI.listerEspaces();
                 setEspaces(res.data.espaces);
-                
+
                 // Si un espace était sélectionné, le remettre à jour avec les nouvelles données
                 if (currentEspaceId) {
                     const updatedEspace = res.data.espaces.find(e => e.id_espace === currentEspaceId);
@@ -451,10 +451,16 @@ const DEDashboard = ({ onLogout }) => {
             <header className="dashboard-header">
                 <div className="header-content">
                     <div className="header-title">
-                        <Building size={32} />
+                        <div className="header-logo-container">
+                            <img
+                                src="/cropped-logos-vers-corrige-UATM.png"
+                                alt="UATM Logo"
+                                className="dashboard-logo"
+                            />
+                        </div>
                         <div>
                             <h1>Tableau de bord Directeur</h1>
-                            <p>Vue d'ensemble de l'établissement</p>
+                            <p>Espace de gestion UATM</p>
                         </div>
                     </div>
                     <div className="header-actions">
