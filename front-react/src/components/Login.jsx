@@ -74,14 +74,15 @@ function Login({ onLoginSuccess }) {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
+          <div className="login-logo-container">
+            <img
+              src="/cropped-logos-vers-corrige-UATM.png"
+              alt="UATM Logo"
+              className="login-logo"
+            />
           </div>
-          <h2>Bonjour !</h2>
-          <p className="login-subtitle">Connectez-vous pour accéder à votre espace</p>
+          <h2>Espace de Connexion</h2>
+          <p className="login-subtitle">Université Africaine de Technologie et de Management</p>
         </div>
 
         {error && <div className="error-message">{error}</div>}

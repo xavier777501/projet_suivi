@@ -1,0 +1,11 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-9.0.2, pluggy-1.6.0 -- D:\geni-Logiciel\Simulation groupe\back\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\pr\back
+configfile: pytest.ini
+plugins: anyio-4.12.0
+collecting ... collected 1 item
+
+tests/test_api.py::test_us_2_1_creer_formateur[asyncio] PASSED           [100%]
+
+============================== 1 passed in 1.47s ==============================
