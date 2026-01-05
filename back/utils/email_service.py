@@ -1,17 +1,14 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from typing import Dict, Any
 import os
-import socket
+import httpx
+import json
 
 class EmailService:
     def __init__(self):
-        # Utilise les variables d'environnement de Render ou les valeurs par défaut (insecure pour la prod mais permet le secours)
-        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "465"))
+        # Configuration Brevo API (La clé doit être dans BREVO_API_KEY sur Render)
+        self.api_key = os.getenv("BREVO_API_KEY")
+        self.api_url = "https://api.brevo.com/v3/smtp/email"
         self.email_sender = os.getenv("EMAIL_SENDER", "tfxyesu@gmail.com")
-        self.email_password = os.getenv("EMAIL_PASSWORD", "ybbc zyld mxbj olui")
+        self.sender_name = "Administration UATM"
         
     def tester_connectivite(self) -> Dict[str, bool]:
         """Teste la connectivité vers différentes cibles pour le diagnostic"""
@@ -34,134 +31,78 @@ class EmailService:
     
     def envoyer_email_creation_compte(self, destinataire: str, prenom: str, 
                                      email: str, mot_de_passe: str, role: str) -> bool:
-        """Envoie un email de création de compte avec identifiants"""
-        print(f"📧 Préparation de l'envoi d'email à {destinataire}...", flush=True)
+        """Envoie un email via l'API Brevo"""
+        if not self.api_key:
+            print("❌ ERREUR: BREVO_API_KEY non configurée", flush=True)
+            return False
+
+        print(f"📧 [BREVO] Préparation de l'envoi à {destinataire}...", flush=True)
+        
+        corps_html = f"""
+        <html>
+        <body>
+            <h3>Bonjour {prenom},</h3>
+            <p>Votre compte <b>{role.lower()}</b> a été créé avec succès.</p>
+            <p>Voici vos identifiants de connexion :</p>
+            <ul>
+                <li><b>Email :</b> {email}</li>
+                <li><b>Mot de passe :</b> {mot_de_passe}</li>
+            </ul>
+            <p><i>Note : Vous devrez changer votre mot de passe lors de votre première connexion.</i></p>
+            <br>
+            <p>Cordialement,<br>L'équipe administrative</p>
+        </body>
+        </html>
+        """
+        
+        payload = {
+            "sender": {"name": self.sender_name, "email": self.email_sender},
+            "to": [{"email": destinataire, "name": prenom}],
+            "subject": f"Création de votre compte {role}",
+            "htmlContent": corps_html
+        }
+        
+        headers = {
+            "api-key": self.api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        
         try:
-            # Création du message
-            message = MIMEMultipart()
-            message["From"] = self.email_sender
-            message["To"] = destinataire
-            message["Subject"] = f"Création de votre compte {role.lower()}"
-            
-            # Corps du message
-            corps_message = f"""
-Bonjour {prenom},
-
-Votre compte {role.lower()} a été créé par le Directeur d'Établissement.
-
-Voici vos informations de connexion :
-• Email : {email}
-• Mot de passe : {mot_de_passe}
-• Rôle : {role}
-
-🔗 Pour vous connecter :
-Rendez-vous sur le site et connectez-vous avec ces identifiants.
-
-⚠️ Important :
-- Lors de votre première connexion, vous devrez obligatoirement changer votre mot de passe
-- Conservez ces informations en sécurité
-
-Si vous n'avez pas demandé la création de ce compte, veuillez ignorer cet email.
-
-Cordialement,
-L'équipe administrative
-            """
-            
-            message.attach(MIMEText(corps_message, "plain", "utf-8"))
-            
-            # Envoi de l'email
-            if self.email_password:
-                # Diagnostic avant l'envoi
-                self.tester_connectivite()
+            print(f"🚀 Appel API Brevo pour {destinataire}...", flush=True)
+            with httpx.Client() as client:
+                response = client.post(self.api_url, headers=headers, json=payload, timeout=10)
                 
-                print(f"📡 Connexion au serveur SMTP {self.smtp_server}:{self.smtp_port}...", flush=True)
-                
-                # Tentative avec forçage IPv4 si possible
-                try:
-                    infos = socket.getaddrinfo(self.smtp_server, self.smtp_port, socket.AF_INET)
-                    target_ip = infos[0][4][0]
-                    print(f"ℹ️ Résolution IPv4 : {target_ip}", flush=True)
-                except:
-                    print(f"⚠️ Impossible de forcer l'IPv4, utilisation du hostname standard.", flush=True)
-
-                if self.smtp_port == 465:
-                    server = smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, timeout=10)
-                else:
-                    server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
-                    server.starttls()
-                    
-                print(f"🔑 Tentative de connexion (Login) pour {self.email_sender}...", flush=True)
-                server.login(self.email_sender, self.email_password)
-                print(f"📤 Envoi du message...", flush=True)
-                server.send_message(message)
-                server.quit()
-                print(f"✅ Email envoyé avec succès à {destinataire} !", flush=True)
+            if response.status_code in [201, 200, 202]:
+                print(f"✅ Email envoyé via Brevo ! ID: {response.json().get('messageId')}", flush=True)
                 return True
             else:
-                print("❌ ERREUR: Mot de passe email non configuré (EMAIL_PASSWORD manquant)", flush=True)
+                print(f"❌ Erreur Brevo (Status {response.status_code}): {response.text}", flush=True)
                 return False
-                
         except Exception as e:
-            print(f"❌ ERREUR CRITIQUE lors de l'envoi de l'email: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
+            print(f"❌ Erreur critique API Brevo: {e}", flush=True)
             return False
 
     def envoyer_email_assignation_travail(self, destinataire: str, prenom: str,
                                          titre_travail: str, nom_matiere: str,
                                          formateur: str, date_echeance: str,
                                          description: str) -> bool:
-        """Envoie un email de notification d'assignation de travail"""
-        print(f"📧 Notification Nouveau Travail pour {destinataire}...")
+        """Envoie un email d'assignation via l'API Brevo"""
+        if not self.api_key: return False
+        
+        payload = {
+            "sender": {"name": self.sender_name, "email": self.email_sender},
+            "to": [{"email": destinataire, "name": prenom}],
+            "subject": f"Nouveau travail : {titre_travail}",
+            "htmlContent": f"<h3>Bonjour {prenom}</h3><p>Nouveau travail dans {nom_matiere}. Échéance: {date_echeance}</p>"
+        }
+        headers = {"api-key": self.api_key, "Content-Type": "application/json"}
+        
         try:
-            message = MIMEMultipart()
-            message["From"] = self.email_sender
-            message["To"] = destinataire
-            message["Subject"] = f"Nouveau travail assigné : {titre_travail}"
-            
-            corps_message = f"""
-Bonjour {prenom},
-
-Un nouveau travail vous a été assigné dans le cours {nom_matiere}.
-
-📋 Détails du travail :
-• Titre : {titre_travail}
-• Matière : {nom_matiere}
-• Formateur : {formateur}
-• Date d'échéance : {date_echeance}
-
-📝 Description :
-{description}
-
-🔗 Pour consulter et soumettre votre travail :
-Connectez-vous à votre espace étudiant sur la plateforme.
-
-⚠️ Important :
-- Respectez la date d'échéance
-- Consultez régulièrement vos travaux assignés
-- Contactez votre formateur en cas de questions
-
-Bon travail !
-
-L'équipe pédagogique
-            """
-            
-            message.attach(MIMEText(corps_message, "plain", "utf-8"))
-            
-            if self.email_password:
-                server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
-                server.starttls()
-                server.login(self.email_sender, self.email_password)
-                server.send_message(message)
-                server.quit()
-                print(f"✅ Email de travail envoyé à {destinataire}")
-                return True
-            else:
-                print("❌ ERREUR: Mot de passe email non configuré")
-                return False
-                
-        except Exception as e:
-            print(f"❌ Erreur envoi email assignation: {e}")
+            with httpx.Client() as client:
+                response = client.post(self.api_url, headers=headers, json=payload, timeout=10)
+            return response.status_code in [201, 200, 202]
+        except:
             return False
 
 # Instance globale du service email
