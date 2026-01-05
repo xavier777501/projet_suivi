@@ -1,6 +1,7 @@
 import os
 import httpx
 import json
+import socket
 from typing import Dict
 
 class EmailService:
