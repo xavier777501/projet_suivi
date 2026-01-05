@@ -111,16 +111,27 @@ async def lister_espaces_pedagogiques(
     
     result = []
     for espace in espaces:
+        # Récupérer les informations du formateur assigné
+        formateur_info = "Non assigné"
+        if espace.id_formateur:
+            formateur = db.query(Formateur).filter(Formateur.id_formateur == espace.id_formateur).first()
+            if formateur and formateur.utilisateur:
+                formateur_info = f"{formateur.utilisateur.prenom} {formateur.utilisateur.nom}"
+        
+        # Compter les étudiants inscrits
+        nb_etudiants = db.query(Inscription).filter(Inscription.id_espace == espace.id_espace).count()
+        
         result.append({
             "id_espace": espace.id_espace,
             "id_promotion": espace.id_promotion,
+            "id_formateur": espace.id_formateur,  # Ajouter l'ID du formateur
             "nom_matiere": espace.matiere.nom_matiere,
             "description": espace.description,
             "code_acces": espace.code_acces,
             "promotion": espace.promotion.libelle,
             "filiere": espace.promotion.filiere.nom_filiere,
-            "formateur": "Non assigné",
-            "nb_etudiants": 0,
+            "formateur": formateur_info,
+            "nb_etudiants": nb_etudiants,
             "nb_travaux": 0,
             "date_creation": espace.date_creation.isoformat()
         })

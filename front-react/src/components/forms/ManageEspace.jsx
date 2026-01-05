@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Settings, User, Users, Plus, Trash2 } from 'lucide-react';
+import { X, User, Users, Plus } from 'lucide-react';
 import { gestionComptesAPI, espacesPedagogiquesAPI } from '../../services/api';
 import './CreateFormateur.css';
 
@@ -37,6 +37,18 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
   };
 
   const handleAssignFormateur = async () => {
+    // Validation : vérifier qu'un formateur est sélectionné
+    if (!selectedFormateur) {
+      setError('Veuillez sélectionner un formateur');
+      return;
+    }
+
+    // Vérifier qu'on ne réassigne pas le même formateur
+    if (selectedFormateur === espace.id_formateur) {
+      setError('Ce formateur est déjà assigné à cet espace');
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -80,14 +92,6 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleEtudiantSelection = (idEtudiant) => {
-    setSelectedEtudiants(prev => 
-      prev.includes(idEtudiant) 
-        ? prev.filter(id => id !== idEtudiant)
-        : [...prev, idEtudiant]
-    );
   };
 
   if (loadingData) {
@@ -153,7 +157,7 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
                 type="button"
                 className="btn btn-primary"
                 onClick={handleAssignFormateur}
-                disabled={loading}
+                disabled={loading || !selectedFormateur || selectedFormateur === espace.id_formateur}
                 style={{ whiteSpace: 'nowrap' }}
               >
                 {loading ? 'Assignation...' : 'Assigner'}
@@ -186,12 +190,12 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
                       borderBottom: '1px solid #f3f4f6',
                       cursor: 'pointer'
                     }}
-                    onClick={() => toggleEtudiantSelection(etudiant.id_etudiant)}
+                    onClick={() => handleToggleEtudiant(etudiant.id_etudiant)}
                   >
                     <input
                       type="checkbox"
                       checked={selectedEtudiants.includes(etudiant.id_etudiant)}
-                      onChange={() => toggleEtudiantSelection(etudiant.id_etudiant)}
+                      onChange={() => handleToggleEtudiant(etudiant.id_etudiant)}
                       style={{ marginRight: '0.5rem' }}
                     />
                     <div>

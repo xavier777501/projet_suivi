@@ -66,10 +66,31 @@ const DEDashboard = ({ onLogout }) => {
         }
     };
 
-    const handleCreateSuccess = () => {
+    const handleCreateSuccess = async () => {
+        const currentEspaceId = selectedEspace?.id_espace;
         setActiveModal(null);
-        setSelectedEspace(null);
-        loadData(); // Recharger les données
+        
+        // Recharger les données
+        if (activeTab === 'espaces') {
+            try {
+                const res = await espacesPedagogiquesAPI.listerEspaces();
+                setEspaces(res.data.espaces);
+                
+                // Si un espace était sélectionné, le remettre à jour avec les nouvelles données
+                if (currentEspaceId) {
+                    const updatedEspace = res.data.espaces.find(e => e.id_espace === currentEspaceId);
+                    setSelectedEspace(updatedEspace || null);
+                } else {
+                    setSelectedEspace(null);
+                }
+            } catch (err) {
+                console.error('Erreur rechargement espaces:', err);
+                setSelectedEspace(null);
+            }
+        } else {
+            setSelectedEspace(null);
+            loadData(); // Pour les autres onglets
+        }
     };
 
     if (loading) {
