@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi.background import BackgroundTasks as FastBackgroundTasks  # Pour être sûr
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Dict, Any
@@ -90,7 +91,7 @@ async def creer_compte_formateur(
         role="FORMATEUR"
     )
     
-    return {"message": "Succès", "identifiant": identifiant, "note": "Email envoyé en arrière-plan"}
+    return {"message": "Succès", "identifiant": identifiant, "version": "v1.2-background-fix"}
 
 
 @router.get("/promotions")
