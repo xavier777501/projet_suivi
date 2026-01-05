@@ -97,6 +97,23 @@ async def creer_compte_formateur(
     return {"message": "Succès", "identifiant": identifiant, "version": "v1.2-background-fix"}
 
 
+@router.post("/test-email")
+async def test_email_direct(destinataire: str, db: Session = Depends(get_db)):
+    """Route de test pour vérifier l'envoi d'email en direct (synchrone)"""
+    print(f"TEST: Tentative d'envoi direct à {destinataire}...", flush=True)
+    success = email_service.envoyer_email_creation_compte(
+        destinataire=destinataire,
+        prenom="Test",
+        email=destinataire,
+        mot_de_passe="test123456",
+        role="TEST"
+    )
+    if success:
+        return {"message": "Email envoyé avec succès !"}
+    else:
+        raise HTTPException(status_code=500, detail="L'envoi a échoué. Vérifiez les logs Render.")
+
+
 @router.get("/promotions")
 async def lister_promotions(
     db: Session = Depends(get_db),

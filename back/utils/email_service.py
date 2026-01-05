@@ -52,8 +52,14 @@ L'équipe administrative
             # Envoi de l'email
             if self.email_password:
                 print(f"📡 Connexion au serveur SMTP {self.smtp_server}:{self.smtp_port}...", flush=True)
-                server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
-                server.starttls()
+                
+                # Utiliser SSL pour le port 465, TLS pour 587
+                if self.smtp_port == 465:
+                    server = smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, timeout=10)
+                else:
+                    server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
+                    server.starttls()
+                    
                 print(f"🔑 Tentative de connexion (Login) pour {self.email_sender}...", flush=True)
                 server.login(self.email_sender, self.email_password)
                 print(f"📤 Envoi du message...", flush=True)
