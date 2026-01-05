@@ -2,7 +2,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root:@localhost/suiviprojet"
+import os
+
+# Utilise DATABASE_URL de l'environnement (Render) ou l'adresse locale par défaut
+SQLALCHEMY_DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "mysql+pymysql://root:@localhost/suiviprojet"
+)
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
