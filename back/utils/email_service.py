@@ -3,6 +3,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any
 import os
+import socket
 
 class EmailService:
     def __init__(self):
@@ -11,6 +12,25 @@ class EmailService:
         self.smtp_port = int(os.getenv("SMTP_PORT", "465"))
         self.email_sender = os.getenv("EMAIL_SENDER", "tfxyesu@gmail.com")
         self.email_password = os.getenv("EMAIL_PASSWORD", "ybbc zyld mxbj olui")
+        
+    def tester_connectivite(self) -> Dict[str, bool]:
+        """Teste la connectivité vers différentes cibles pour le diagnostic"""
+        tests = {
+            "google_http (443)": ("google.com", 443),
+            "gmail_smtp_ssl (465)": ("smtp.gmail.com", 465),
+            "gmail_smtp_tls (587)": ("smtp.gmail.com", 587),
+        }
+        resultats = {}
+        for nom, (host, port) in tests.items():
+            try:
+                print(f"🔍 Test de connexion vers {nom} ({host}:{port})...", flush=True)
+                socket.create_connection((host, port), timeout=5)
+                resultats[nom] = True
+                print(f"✅ {nom} est joignable !", flush=True)
+            except Exception as e:
+                resultats[nom] = False
+                print(f"❌ {nom} INJOIGNABLE : {e}", flush=True)
+        return resultats
     
     def envoyer_email_creation_compte(self, destinataire: str, prenom: str, 
                                      email: str, mot_de_passe: str, role: str) -> bool:
@@ -51,9 +71,19 @@ L'équipe administrative
             
             # Envoi de l'email
             if self.email_password:
+                # Diagnostic avant l'envoi
+                self.tester_connectivite()
+                
                 print(f"📡 Connexion au serveur SMTP {self.smtp_server}:{self.smtp_port}...", flush=True)
                 
-                # Utiliser SSL pour le port 465, TLS pour 587
+                # Tentative avec forçage IPv4 si possible
+                try:
+                    infos = socket.getaddrinfo(self.smtp_server, self.smtp_port, socket.AF_INET)
+                    target_ip = infos[0][4][0]
+                    print(f"ℹ️ Résolution IPv4 : {target_ip}", flush=True)
+                except:
+                    print(f"⚠️ Impossible de forcer l'IPv4, utilisation du hostname standard.", flush=True)
+
                 if self.smtp_port == 465:
                     server = smtplib.SMTP_SSL(self.smtp_server, self.smtp_port, timeout=10)
                 else:
