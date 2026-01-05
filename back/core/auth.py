@@ -28,26 +28,31 @@ def initialiser_compte_de(db: Session) -> Optional[Dict[str, Any]]:
     Initialise le compte DE s'il n'existe pas déjà
     Ajout d'un mécanisme de secours via FORCE_RESET_DE=true
     """
+    force_reset = os.getenv("FORCE_RESET_DE", "false").lower() == "true"
+    print(f"Debug Startup: FORCE_RESET_DE = {force_reset}")
+    
     de_existant = db.query(Utilisateur).filter(
         and_(Utilisateur.role == RoleEnum.DE, Utilisateur.email == "de@genielogiciel.com")
     ).first()
     
-    force_reset = os.getenv("FORCE_RESET_DE", "false").lower() == "true"
-    
     if de_existant:
+        print(f"Debug Startup: Compte DE trouvé ({de_existant.email})")
+        print(f"Debug Startup: Hash actuel en base: {de_existant.mot_de_passe[:10]}...")
+        
         if force_reset:
-            print("⚠️ FORCE_RESET_DE détecté : Réinitialisation du mot de passe DE à 'admin123'")
+            print("⚠️ FORCE_RESET_DE détecté : Action de réinitialisation en cours...")
             de_existant.mot_de_passe = get_password_hash("admin123")
             de_existant.mot_de_passe_temporaire = True
             de_existant.actif = True
             db.commit()
-            print("✅ Mot de passe DE réinitialisé.")
+            print("✅ Mot de passe DE réinitialisé à 'admin123'.")
         
         # Correction automatique si le hash n'est pas au bon format (SHA-256 fait 64 char)
         elif len(de_existant.mot_de_passe) != 64 and de_existant.mot_de_passe_temporaire:
-            print("Debug: Correction du format de hash temporaire...")
+            print("Debug Startup: Correction du format de hash temporaire...")
             de_existant.mot_de_passe = get_password_hash("admin123")
             db.commit()
+            print("✅ Format de hash corrigé.")
 
         return {
             "identifiant": de_existant.identifiant,
