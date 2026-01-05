@@ -51,43 +51,18 @@ def get_password_hash(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Vérifie si un mot de passe correspond au hash
-    Essaie différents algorithmes de hashage pour la compatibilité
     """
-    # Debug: Vérification du mot de passe
-    print(f"Debug: Vérification du mot de passe")
-    print(f"Debug: Mot de passe en clair: {plain_password}")
-    print(f"Debug: Hash du mot de passe en clair (SHA-256): {hashlib.sha256(plain_password.encode()).hexdigest()}")
-    print(f"Debug: Hash du mot de passe en clair (MD5): {hashlib.md5(plain_password.encode()).hexdigest()}")
-    print(f"Debug: Hash du mot de passe en clair (SHA-1): {hashlib.sha1(plain_password.encode()).hexdigest()}")
-    print(f"Debug: Hash en base: {hashed_password}")
-    
     # Essayer SHA-256 (notre algorithme principal)
-    if hashlib.sha256(plain_password.encode()).hexdigest() == hashed_password:
-        print("Debug: Correspondance SHA-256 trouvée")
+    current_hash = hashlib.sha256(plain_password.encode()).hexdigest()
+    if current_hash == hashed_password:
         return True
     
-    # Essayer MD5 (pour la compatibilité avec certains systèmes anciens)
+    # Compatibilité MD5
     if hashlib.md5(plain_password.encode()).hexdigest() == hashed_password:
-        print("Debug: Correspondance MD5 trouvée")
         return True
     
-    # Essayer SHA-1 (pour la compatibilité)
-    if hashlib.sha1(plain_password.encode()).hexdigest() == hashed_password:
-        print("Debug: Correspondance SHA-1 trouvée")
-        return True
-    
-    # Vérifier si le hash correspond exactement (pour les mots de passe déjà hashés)
+    # Correspondance exacte (non recommandé mais présent pour compatibilité initiale)
     if plain_password == hashed_password:
-        print("Debug: Correspondance exacte trouvée")
         return True
     
-    # Si le hash commence par "hashed_", c'est probablement un hash personnalisé
-    if hashed_password.startswith("hashed_"):
-        # Ici vous pouvez ajouter la logique pour votre hash personnalisé
-        # Par exemple: si hashed_password == "hashed_admin123_passwor" et plain_password == "admin123"
-        if hashed_password == "hashed_admin123_password" and plain_password == "admin123":
-            print("Debug: Correspondance hash personnalisé trouvée")
-            return True
-    
-    print("Debug: Aucune correspondance trouvée")
     return False
