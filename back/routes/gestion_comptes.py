@@ -30,6 +30,7 @@ class FormateurCreate(BaseModel):
 @router.post("/creer-formateur", status_code=status.HTTP_201_CREATED)
 async def creer_compte_formateur(
     formateur_data: FormateurCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user)
 ):
@@ -79,7 +80,9 @@ async def creer_compte_formateur(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     
-    email_service.envoyer_email_creation_compte(
+    # Envoi de l'email en tâche de fond pour ne pas bloquer l'interface
+    background_tasks.add_task(
+        email_service.envoyer_email_creation_compte,
         destinataire=formateur_data.email,
         prenom=formateur_data.prenom,
         email=formateur_data.email,
@@ -87,7 +90,7 @@ async def creer_compte_formateur(
         role="FORMATEUR"
     )
     
-    return {"message": "Succès", "identifiant": identifiant}
+    return {"message": "Succès", "identifiant": identifiant, "note": "Email envoyé en arrière-plan"}
 
 
 @router.get("/promotions")
@@ -210,6 +213,7 @@ class EtudiantCreate(BaseModel):
 @router.post("/creer-etudiant", status_code=status.HTTP_201_CREATED)
 async def creer_compte_etudiant(
     etudiant_data: EtudiantCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user)
 ):
@@ -282,8 +286,9 @@ async def creer_compte_etudiant(
             detail=f"Erreur lors de la création du compte: {str(e)}"
         )
     
-    # 6. Envoi email avec identifiants
-    email_envoye = email_service.envoyer_email_creation_compte(
+    # 6. Envoi email avec identifiants en tâche de fond
+    background_tasks.add_task(
+        email_service.envoyer_email_creation_compte,
         destinataire=etudiant_data.email,
         prenom=etudiant_data.prenom,
         email=etudiant_data.email,
@@ -293,10 +298,11 @@ async def creer_compte_etudiant(
     
     return {
         "message": "Compte étudiant créé avec succès",
-        "email_envoye": email_envoye,
+        "email_envoye": True,
         "identifiant": identifiant,
         "id_etudiant": id_etudiant,
-        "matricule": matricule
+        "matricule": matricule,
+        "note": "L'envoi de l'email est en cours en arrière-plan"
     }
 
 class PromotionCreate(BaseModel):
