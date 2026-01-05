@@ -27,9 +27,11 @@ def initialiser_compte_de(db: Session) -> Optional[Dict[str, Any]]:
     """
     Initialise le compte DE s'il n'existe pas déjà
     Ajout d'un mécanisme de secours via FORCE_RESET_DE=true
+    OU si le hash spécifié corrompu est détecté.
     """
-    force_reset = os.getenv("FORCE_RESET_DE", "false").lower() == "true"
-    print(f"Debug Startup: FORCE_RESET_DE = {force_reset}")
+    # Lecture plus robuste de l'env var
+    force_reset_env = str(os.environ.get("FORCE_RESET_DE", "false")).lower() == "true"
+    print(f"Debug Startup: FORCE_RESET_DE (env) = {force_reset_env}")
     
     de_existant = db.query(Utilisateur).filter(
         and_(Utilisateur.role == RoleEnum.DE, Utilisateur.email == "de@genielogiciel.com")
@@ -37,18 +39,26 @@ def initialiser_compte_de(db: Session) -> Optional[Dict[str, Any]]:
     
     if de_existant:
         print(f"Debug Startup: Compte DE trouvé ({de_existant.email})")
-        print(f"Debug Startup: Hash actuel en base: {de_existant.mot_de_passe[:10]}...")
+        hash_actuel = de_existant.mot_de_passe
+        print(f"Debug Startup: Hash actuel en base: {hash_actuel[:15]}...")
         
-        if force_reset:
-            print("⚠️ FORCE_RESET_DE détecté : Action de réinitialisation en cours...")
+        # Hash mystérieux qui bloque l'accès
+        MYSTERY_HASH = "0e202879b37c8120036953fb3465bb4ad4c15e0eb703274d9d9b70877d61690e"
+        
+        if force_reset_env or hash_actuel == MYSTERY_HASH:
+            if hash_actuel == MYSTERY_HASH:
+                print("⚠️ Hash corrompu détecté : Réinitialisation automatique forcée.")
+            else:
+                print("⚠️ FORCE_RESET_DE détecté : Action de réinitialisation en cours...")
+                
             de_existant.mot_de_passe = get_password_hash("admin123")
             de_existant.mot_de_passe_temporaire = True
             de_existant.actif = True
             db.commit()
-            print("✅ Mot de passe DE réinitialisé à 'admin123'.")
+            print("✅ Mot de passe DE réinitialisé à 'admin123'. Veuillez vous reconnecter.")
         
         # Correction automatique si le hash n'est pas au bon format (SHA-256 fait 64 char)
-        elif len(de_existant.mot_de_passe) != 64 and de_existant.mot_de_passe_temporaire:
+        elif len(hash_actuel) != 64 and de_existant.mot_de_passe_temporaire:
             print("Debug Startup: Correction du format de hash temporaire...")
             de_existant.mot_de_passe = get_password_hash("admin123")
             db.commit()
