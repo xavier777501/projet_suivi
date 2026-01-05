@@ -81,6 +81,9 @@ async def creer_compte_formateur(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     
+    # Tracé pour le débogage en production
+    print(f"DEBUG: Planification de l'envoi d'email pour {formateur_data.email}...", flush=True)
+    
     # Envoi de l'email en tâche de fond pour ne pas bloquer l'interface
     background_tasks.add_task(
         email_service.envoyer_email_creation_compte,

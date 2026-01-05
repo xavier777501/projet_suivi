@@ -15,7 +15,7 @@ class EmailService:
     def envoyer_email_creation_compte(self, destinataire: str, prenom: str, 
                                      email: str, mot_de_passe: str, role: str) -> bool:
         """Envoie un email de création de compte avec identifiants"""
-        print(f"📧 Préparation de l'envoi d'email à {destinataire}...")
+        print(f"📧 Préparation de l'envoi d'email à {destinataire}...", flush=True)
         try:
             # Création du message
             message = MIMEMultipart()
@@ -51,22 +51,22 @@ L'équipe administrative
             
             # Envoi de l'email
             if self.email_password:
-                print(f"📡 Connexion au serveur SMTP {self.smtp_server}:{self.smtp_port}...")
+                print(f"📡 Connexion au serveur SMTP {self.smtp_server}:{self.smtp_port}...", flush=True)
                 server = smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=10)
                 server.starttls()
-                print(f"🔑 Tentative de connexion (Login) pour {self.email_sender}...")
+                print(f"🔑 Tentative de connexion (Login) pour {self.email_sender}...", flush=True)
                 server.login(self.email_sender, self.email_password)
-                print(f"📤 Envoi du message...")
+                print(f"📤 Envoi du message...", flush=True)
                 server.send_message(message)
                 server.quit()
-                print(f"✅ Email envoyé avec succès à {destinataire} !")
+                print(f"✅ Email envoyé avec succès à {destinataire} !", flush=True)
                 return True
             else:
-                print("❌ ERREUR: Mot de passe email non configuré (EMAIL_PASSWORD manquant)")
+                print("❌ ERREUR: Mot de passe email non configuré (EMAIL_PASSWORD manquant)", flush=True)
                 return False
                 
         except Exception as e:
-            print(f"❌ ERREUR CRITIQUE lors de l'envoi de l'email: {e}")
+            print(f"❌ ERREUR CRITIQUE lors de l'envoi de l'email: {e}", flush=True)
             import traceback
             traceback.print_exc()
             return False
