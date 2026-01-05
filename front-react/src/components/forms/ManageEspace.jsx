@@ -6,8 +6,11 @@ import './CreateFormateur.css';
 const ManageEspace = ({ espace, onClose, onSuccess }) => {
   const [formateurs, setFormateurs] = useState([]);
   const [etudiants, setEtudiants] = useState([]);
+  const [etudiantsInscrits, setEtudiantsInscrits] = useState([]);
+  const [filteredEtudiants, setFilteredEtudiants] = useState([]);
   const [selectedFormateur, setSelectedFormateur] = useState(espace.id_formateur || '');
   const [selectedEtudiants, setSelectedEtudiants] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
@@ -17,6 +20,22 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Filtrer les étudiants selon le terme de recherche
+    if (searchTerm.trim() === '') {
+      setFilteredEtudiants(etudiants);
+    } else {
+      const filtered = etudiants.filter(etudiant => {
+        const fullName = `${etudiant.prenom} ${etudiant.nom}`.toLowerCase();
+        const searchLower = searchTerm.toLowerCase();
+        return fullName.includes(searchLower) || 
+               etudiant.email.toLowerCase().includes(searchLower) ||
+               (etudiant.matricule && etudiant.matricule.toLowerCase().includes(searchLower));
+      });
+      setFilteredEtudiants(filtered);
+    }
+  }, [etudiants, searchTerm]);
 
   const loadData = async () => {
     try {
@@ -28,6 +47,15 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
 
       setFormateurs(formateursRes.data.formateurs || []);
       setEtudiants(etudiantsRes.data.etudiants || []);
+      
+      // Récupérer aussi les étudiants déjà inscrits dans cet espace
+      try {
+        const statistiquesRes = await espacesPedagogiquesAPI.consulterStatistiques(espace.id_espace);
+        setEtudiantsInscrits(statistiquesRes.data.etudiants || []);
+      } catch (err) {
+        console.log('Pas de statistiques disponibles pour cet espace');
+        setEtudiantsInscrits([]);
+      }
     } catch (err) {
       console.error('Erreur chargement données:', err);
       setError('Impossible de charger les données');
@@ -172,6 +200,51 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
               Ajouter des étudiants ({selectedEtudiants.length} sélectionné(s))
             </label>
             
+            {/* Champ de recherche */}
+            <div style={{ marginBottom: '1rem' }}>
+              <input
+                type="text"
+                placeholder="Rechercher un étudiant (nom, prénom, email)..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem'
+                }}
+              />
+            </div>
+
+            {/* Affichage des étudiants déjà inscrits */}
+            {etudiantsInscrits.length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <h4 style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '0.5rem' }}>
+                  Étudiants déjà inscrits ({etudiantsInscrits.length})
+                </h4>
+                <div style={{
+                  maxHeight: '100px',
+                  overflowY: 'auto',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  padding: '0.5rem',
+                  backgroundColor: '#f9fafb'
+                }}>
+                  {etudiantsInscrits.map((etudiant) => (
+                    <div key={etudiant.email} style={{
+                      fontSize: '0.75rem',
+                      color: '#6b7280',
+                      padding: '0.25rem 0'
+                    }}>
+                      ✓ {etudiant.prenom} {etudiant.nom} - {etudiant.email}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Liste des étudiants disponibles pour sélection */}
             <div style={{ 
               maxHeight: '200px', 
               overflowY: 'auto', 
@@ -179,52 +252,108 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
               borderRadius: '6px',
               padding: '0.5rem'
             }}>
-              {etudiants.length > 0 ? (
-                etudiants.map((etudiant) => (
-                  <div 
-                    key={etudiant.id_etudiant}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '0.5rem',
-                      borderBottom: '1px solid #f3f4f6',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() => handleToggleEtudiant(etudiant.id_etudiant)}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedEtudiants.includes(etudiant.id_etudiant)}
-                      onChange={() => handleToggleEtudiant(etudiant.id_etudiant)}
-                      style={{ marginRight: '0.5rem' }}
-                    />
-                    <div>
-                      <div style={{ fontWeight: '500' }}>
-                        {etudiant.prenom} {etudiant.nom}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                        {etudiant.email}
+              {filteredEtudiants.length > 0 ? (
+                <>
+                  {/* Bouton Tout sélectionner */}
+                  <div style={{
+                    padding: '0.5rem',
+                    borderBottom: '1px solid #e5e7eb',
+                    backgroundColor: '#f9fafb',
+                    marginBottom: '0.5rem',
+                    borderRadius: '4px'
+                  }}>
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedEtudiants.length === filteredEtudiants.length && filteredEtudiants.length > 0}
+                        onChange={() => {
+                          if (selectedEtudiants.length === filteredEtudiants.length) {
+                            setSelectedEtudiants([]);
+                          } else {
+                            setSelectedEtudiants(filteredEtudiants.map(e => e.id_etudiant));
+                          }
+                        }}
+                        style={{ marginRight: '0.5rem' }}
+                      />
+                      Tout sélectionner ({filteredEtudiants.length} étudiants)
+                    </label>
+                  </div>
+                  
+                  {/* Liste des étudiants */}
+                  {filteredEtudiants.map((etudiant) => (
+                    <div 
+                      key={etudiant.id_etudiant}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0.5rem',
+                        borderBottom: '1px solid #f3f4f6',
+                        cursor: 'pointer',
+                        backgroundColor: selectedEtudiants.includes(etudiant.id_etudiant) ? '#eff6ff' : 'transparent',
+                        borderRadius: '4px',
+                        margin: '0.25rem 0'
+                      }}
+                      onClick={() => handleToggleEtudiant(etudiant.id_etudiant)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedEtudiants.includes(etudiant.id_etudiant)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleToggleEtudiant(etudiant.id_etudiant);
+                        }}
+                        style={{ marginRight: '0.75rem' }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>
+                          {etudiant.prenom} {etudiant.nom}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                          {etudiant.email}
+                          {etudiant.matricule && ` • ${etudiant.matricule}`}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </>
               ) : (
-                <p style={{ textAlign: 'center', color: '#6b7280', padding: '1rem' }}>
-                  Aucun étudiant disponible dans cette promotion
-                </p>
+                <div style={{ 
+                  textAlign: 'center', 
+                  color: '#6b7280', 
+                  padding: '2rem',
+                  fontSize: '0.875rem'
+                }}>
+                  {searchTerm ? 
+                    `Aucun étudiant trouvé pour "${searchTerm}"` : 
+                    'Aucun étudiant disponible dans cette promotion'
+                  }
+                </div>
               )}
             </div>
 
+            {/* Bouton pour ajouter les étudiants sélectionnés */}
             {selectedEtudiants.length > 0 && (
               <button
                 type="button"
-                className="btn btn-success"
+                className="btn btn-primary"
                 onClick={handleAddEtudiants}
                 disabled={loading}
-                style={{ marginTop: '0.5rem', width: '100%' }}
+                style={{ 
+                  marginTop: '1rem', 
+                  width: '100%',
+                  padding: '0.75rem',
+                  fontSize: '0.875rem',
+                  fontWeight: '500'
+                }}
               >
-                <Plus size={16} />
-                {loading ? 'Ajout...' : `Ajouter ${selectedEtudiants.length} étudiant(s)`}
+                <Plus size={16} style={{ marginRight: '0.5rem' }} />
+                {loading ? 'Ajout en cours...' : `Ajouter ${selectedEtudiants.length} étudiant(s) sélectionné(s)`}
               </button>
             )}
           </div>
