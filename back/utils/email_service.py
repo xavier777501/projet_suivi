@@ -105,6 +105,3 @@ class EmailService:
 
 # Instance globale du service email
 email_service = EmailService()
-
-# Instance globale du service email
-email_service = EmailService()
