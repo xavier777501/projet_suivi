@@ -6,18 +6,18 @@ from typing import Dict
 
 class EmailService:
     def __init__(self):
-        # Configuration Brevo API (La clé doit être dans BREVO_API_KEY sur Render)
-        self.api_key = os.getenv("BREVO_API_KEY")
-        self.api_url = "https://api.brevo.com/v3/smtp/email"
-        self.email_sender = os.getenv("EMAIL_SENDER", "xaviertchalla4@gmail.com")
+        # Configuration Resend API
+        self.api_key = os.getenv("RESEND_API_KEY")
+        self.api_url = "https://api.resend.com/emails"
+        # Note: Resend impose 'onboarding@resend.dev' tant que le domaine n'est pas vérifié
+        self.email_sender = os.getenv("EMAIL_SENDER", "onboarding@resend.dev")
         self.sender_name = "Administration UATM"
         
     def tester_connectivite(self) -> Dict[str, bool]:
         """Teste la connectivité vers différentes cibles pour le diagnostic"""
         tests = {
             "google_http (443)": ("google.com", 443),
-            "gmail_smtp_ssl (465)": ("smtp.gmail.com", 465),
-            "gmail_smtp_tls (587)": ("smtp.gmail.com", 587),
+            "resend_api (443)": ("api.resend.com", 443),
         }
         resultats = {}
         for nom, (host, port) in tests.items():
@@ -25,20 +25,18 @@ class EmailService:
                 print(f"🔍 Test de connexion vers {nom} ({host}:{port})...", flush=True)
                 socket.create_connection((host, port), timeout=5)
                 resultats[nom] = True
-                print(f"✅ {nom} est joignable !", flush=True)
-            except Exception as e:
+            except Exception:
                 resultats[nom] = False
-                print(f"❌ {nom} INJOIGNABLE : {e}", flush=True)
         return resultats
     
     def envoyer_email_creation_compte(self, destinataire: str, prenom: str, 
                                      email: str, mot_de_passe: str, role: str) -> bool:
-        """Envoie un email via l'API Brevo"""
+        """Envoie un email via l'API Resend"""
         if not self.api_key:
-            print("❌ ERREUR: BREVO_API_KEY non configurée", flush=True)
+            print("❌ ERREUR: RESEND_API_KEY non configurée", flush=True)
             return False
 
-        print(f"📧 [BREVO] Préparation de l'envoi à {destinataire}...", flush=True)
+        print(f"📧 [RESEND] Préparation de l'envoi à {destinataire}...", flush=True)
         
         corps_html = f"""
         <html>
@@ -58,52 +56,51 @@ class EmailService:
         """
         
         payload = {
-            "sender": {"name": self.sender_name, "email": self.email_sender},
-            "to": [{"email": destinataire, "name": prenom}],
+            "from": f"{self.sender_name} <{self.email_sender}>",
+            "to": [destinataire],
             "subject": f"Création de votre compte {role}",
-            "htmlContent": corps_html
+            "html": corps_html
         }
         
         headers = {
-            "api-key": self.api_key,
-            "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
         }
         
         try:
-            print(f"🚀 Appel API Brevo de <{self.email_sender}> vers <{destinataire}>...", flush=True)
+            print(f"🚀 Appel API Resend vers <{destinataire}>...", flush=True)
             with httpx.Client() as client:
                 response = client.post(self.api_url, headers=headers, json=payload, timeout=10)
                 
-            if response.status_code in [201, 200, 202]:
-                print(f"✅ Email envoyé via Brevo ! ID: {response.json().get('messageId')}", flush=True)
+            if response.status_code in [200, 201]:
+                print(f"✅ Email envoyé via Resend !", flush=True)
                 return True
             else:
-                print(f"❌ Erreur Brevo (Status {response.status_code}): {response.text}", flush=True)
+                print(f"❌ Erreur Resend ({response.status_code}): {response.text}", flush=True)
                 return False
         except Exception as e:
-            print(f"❌ Erreur critique API Brevo: {e}", flush=True)
+            print(f"❌ Erreur critique API Resend: {e}", flush=True)
             return False
 
     def envoyer_email_assignation_travail(self, destinataire: str, prenom: str,
                                          titre_travail: str, nom_matiere: str,
                                          formateur: str, date_echeance: str,
                                          description: str) -> bool:
-        """Envoie un email d'assignation via l'API Brevo"""
+        """Envoie un email d'assignation via l'API Resend"""
         if not self.api_key: return False
         
         payload = {
-            "sender": {"name": self.sender_name, "email": self.email_sender},
-            "to": [{"email": destinataire, "name": prenom}],
+            "from": f"{self.sender_name} <{self.email_sender}>",
+            "to": [destinataire],
             "subject": f"Nouveau travail : {titre_travail}",
-            "htmlContent": f"<h3>Bonjour {prenom}</h3><p>Nouveau travail dans {nom_matiere}. Échéance: {date_echeance}</p>"
+            "html": f"<h3>Bonjour {prenom}</h3><p>Nouveau travail dans {nom_matiere}. Échéance: {date_echeance}</p>"
         }
-        headers = {"api-key": self.api_key, "Content-Type": "application/json"}
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         
         try:
             with httpx.Client() as client:
                 response = client.post(self.api_url, headers=headers, json=payload, timeout=10)
-            return response.status_code in [201, 200, 202]
+            return response.status_code in [200, 201]
         except:
             return False
 

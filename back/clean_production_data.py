@@ -36,21 +36,9 @@ def supprimer_comptes_test(database_url, emails_a_supprimer):
         for email in emails_a_supprimer:
             user = db.query(Utilisateur).filter(Utilisateur.email == email).first()
             if user:
-                print(f"🗑️ Nettoyage de : {email}")
-                
-                # Suppression manuelle des enregistrements liés pour éviter l'erreur de contrainte
-                if user.formateur:
-                    print(f"   - Suppression profil Formateur")
-                    db.delete(user.formateur)
-                if user.etudiant:
-                    print(f"   - Suppression profil Étudiant")
-                    db.delete(user.etudiant)
-                
-                # Flush pour s'assurer que les enfants sont marqués pour suppression
-                db.flush()
-                
-                print(f"   - Suppression utilisateur")
+                print(f"🗑️ Nettoyage complet de : {email}")
                 db.delete(user)
+                db.flush()
             else:
                 print(f"ℹ️ Pas trouvé : {email}")
         
