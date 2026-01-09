@@ -1,0 +1,205 @@
+.quick-access-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.fab-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background: transparent;
+}
+
+.fab-main {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 2;
+}
+
+.fab-main:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.4);
+}
+
+.fab-main:active {
+  transform: scale(0.95);
+}
+
+.quick-access-fab.expanded .fab-main {
+  transform: rotate(45deg);
+  background: var(--error-color);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+.quick-access-fab.expanded .fab-main:hover {
+  transform: rotate(45deg) scale(1.1);
+  box-shadow: 0 12px 32px rgba(239, 68, 68, 0.4);
+}
+
+/* Actions secondaires */
+.fab-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quick-access-fab.expanded .fab-actions {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.fab-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface-color);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 28px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  min-width: 48px;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation-delay: var(--delay, 0s);
+  opacity: 0;
+  transform: translateX(100px);
+}
+
+.quick-access-fab.expanded .fab-action {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.fab-action:hover {
+  background: var(--action-color);
+  color: white;
+  transform: translateX(-8px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.fab-action:active {
+  transform: translateX(-8px) scale(0.95);
+}
+
+.fab-action-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fab-action:hover .fab-action-label {
+  opacity: 1;
+  max-width: 200px;
+  margin-left: 8px;
+}
+
+/* Animations */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Mode clair - ajustements */
+[data-theme="light"] .fab-main {
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.2);
+}
+
+[data-theme="light"] .fab-main:hover {
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.3);
+}
+
+[data-theme="light"] .quick-access-fab.expanded .fab-main {
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+}
+
+[data-theme="light"] .quick-access-fab.expanded .fab-main:hover {
+  box-shadow: 0 12px 32px rgba(239, 68, 68, 0.3);
+}
+
+[data-theme="light"] .fab-action {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .fab-action:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .quick-access-fab {
+    bottom: 20px;
+    right: 20px;
+  }
+  
+  .fab-main {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .fab-action {
+    padding: 10px 14px;
+    font-size: 0.8rem;
+  }
+  
+  .fab-action-label {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .quick-access-fab {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .fab-main {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .fab-action {
+    padding: 8px 12px;
+    min-width: 44px;
+  }
+}

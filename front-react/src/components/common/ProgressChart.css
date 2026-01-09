@@ -15,7 +15,11 @@
 .progress-background {
   position: absolute;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color);
+}
+
+[data-theme="light"] .progress-background {
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .progress-ring {
@@ -38,7 +42,7 @@
 }
 
 .progress-icon {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -48,12 +52,13 @@
   font-size: 16px;
   font-weight: 700;
   line-height: 1;
+  color: var(--text-primary);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .progress-label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
   text-align: center;
   font-weight: 500;
   max-width: 80px;

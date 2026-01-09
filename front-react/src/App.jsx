@@ -4,6 +4,8 @@ import ChangePassword from './components/ChangePassword'
 import DEDashboard from './components/dashboards/DEDashboard'
 import FormateurDashboard from './components/dashboards/FormateurDashboard'
 import EtudiantDashboard from './components/dashboards/EtudiantDashboard'
+import { ThemeProvider } from './contexts/ThemeContext'
+import ThemeToggle from './components/common/ThemeToggle'
 import { getAuthData, saveAuthData, clearAuthData } from './utils/auth'
 import './App.css'
 
@@ -78,30 +80,34 @@ function App() {
   }
 
   return (
-    <div className="app">
-      {currentView === 'login' && (
-        <Login onLoginSuccess={handleLoginSuccess} />
-      )}
-      
-      {currentView === 'changePassword' && authData && (
-        <ChangePassword 
-          token={authData.token} 
-          onPasswordChangeSuccess={handlePasswordChangeSuccess}
-        />
-      )}
+    <ThemeProvider>
+      <div className="app">
+        <ThemeToggle />
+        
+        {currentView === 'login' && (
+          <Login onLoginSuccess={handleLoginSuccess} />
+        )}
+        
+        {currentView === 'changePassword' && authData && (
+          <ChangePassword 
+            token={authData.token} 
+            onPasswordChangeSuccess={handlePasswordChangeSuccess}
+          />
+        )}
 
-      {currentView === 'deDashboard' && (
-        <DEDashboard onLogout={handleLogout} />
-      )}
+        {currentView === 'deDashboard' && (
+          <DEDashboard onLogout={handleLogout} />
+        )}
 
-      {currentView === 'formateurDashboard' && (
-        <FormateurDashboard onLogout={handleLogout} />
-      )}
+        {currentView === 'formateurDashboard' && (
+          <FormateurDashboard onLogout={handleLogout} />
+        )}
 
-      {currentView === 'etudiantDashboard' && (
-        <EtudiantDashboard onLogout={handleLogout} />
-      )}
-    </div>
+        {currentView === 'etudiantDashboard' && (
+          <EtudiantDashboard onLogout={handleLogout} />
+        )}
+      </div>
+    </ThemeProvider>
   )
 }
 

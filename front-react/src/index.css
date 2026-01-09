@@ -1,5 +1,26 @@
 :root {
   --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  font-family: var(--font-main);
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* Transition fluide pour le changement de thème */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Mode sombre (par défaut) */
+:root,
+[data-theme="dark"] {
   --bg-color: #0f172a;
   --surface-color: #1e293b;
   --text-primary: #f8fafc;
@@ -10,18 +31,26 @@
   --error-color: #ef4444;
   --success-color: #10b981;
 
-  font-family: var(--font-main);
-  line-height: 1.5;
-  font-weight: 400;
-
   color-scheme: dark;
   color: var(--text-primary);
   background-color: var(--bg-color);
+}
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Mode clair */
+[data-theme="light"] {
+  --bg-color: #ffffff;
+  --surface-color: #f8fafc;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --accent-color: #2563eb;
+  --accent-hover: #1d4ed8;
+  --border-color: #e2e8f0;
+  --error-color: #dc2626;
+  --success-color: #059669;
+
+  color-scheme: light;
+  color: var(--text-primary);
+  background-color: var(--bg-color);
 }
 
 a {
@@ -77,7 +106,8 @@ button {
 
 button:hover {
   border-color: var(--accent-color);
-  background-color: #2d3748;
+  background-color: var(--accent-color);
+  color: white;
 }
 
 button:active {

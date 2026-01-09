@@ -11,11 +11,15 @@
   background-color: var(--surface-color);
   padding: 3rem;
   border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-color);
   width: 100%;
   max-width: 450px;
   animation: fadeInUp 0.5s ease-out;
+}
+
+[data-theme="light"] .login-card {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
 }
 
 .login-header {
@@ -75,17 +79,17 @@
 
 .modern-input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  padding: 0.75rem 2.75rem 0.75rem 1rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.2s ease;
-  background-color: #0f172a;
+  background-color: var(--bg-color);
   color: var(--text-primary);
 }
 
 .modern-input::placeholder {
-  color: #64748b;
+  color: var(--text-secondary);
 }
 
 .modern-input:focus {
@@ -99,7 +103,17 @@
   left: 0.85rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #64748b;
+  color: var(--text-secondary);
+  pointer-events: none;
+  display: flex;
+}
+
+.input-icon-right {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
   pointer-events: none;
   display: flex;
 }
@@ -111,7 +125,7 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 4px;
@@ -189,7 +203,7 @@
 .error-message {
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid var(--error-color);
-  color: #fca5a5;
+  color: var(--error-color);
   padding: 0.75rem;
   border-radius: 8px;
   text-align: center;
@@ -197,6 +211,11 @@
   font-size: 0.9rem;
   font-weight: 500;
   animation: slideDown 0.3s ease;
+}
+
+[data-theme="light"] .error-message {
+  background-color: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
 }
 
 @keyframes fadeInUp {

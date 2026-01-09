@@ -37,7 +37,7 @@
 
 .bar-label {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   text-align: center;
   font-weight: 500;
   max-width: 80px;

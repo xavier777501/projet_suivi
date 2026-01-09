@@ -81,6 +81,9 @@ export const gestionComptesAPI = {
   // Formateurs
   getFormateurs: () => api.get('/api/gestion-comptes/formateurs'),
 
+  // Étudiants
+  getEtudiants: () => api.get('/api/gestion-comptes/etudiants'),
+
   // Création formateur
   createFormateur: (data) => api.post('/api/gestion-comptes/creer-formateur', data),
 
