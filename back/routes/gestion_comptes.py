@@ -219,9 +219,45 @@ async def lister_formateurs(
                 "nom": f.utilisateur.nom,
                 "prenom": f.utilisateur.prenom,
                 "email": f.utilisateur.email,
+                "telephone": getattr(f.utilisateur, 'telephone', None),
+                "actif": f.utilisateur.actif,
                 "id_matiere": f.id_matiere,
-                "nom_matiere": f.matiere.nom_matiere if f.matiere else None
+                "nom_matiere": f.matiere.nom_matiere if f.matiere else None,
+                "specialite": f.matiere.nom_matiere if f.matiere else None
             } for f in formateurs
+        ]
+    }
+
+@router.get("/etudiants")
+async def lister_etudiants(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Liste tous les étudiants disponibles"""
+    
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Seul un DE peut accéder à cette information"
+        )
+    
+    etudiants = db.query(Etudiant).join(Utilisateur).join(Promotion).join(Filiere).all()
+    
+    return {
+        "etudiants": [
+            {
+                "id_etudiant": e.id_etudiant,
+                "nom": e.utilisateur.nom,
+                "prenom": e.utilisateur.prenom,
+                "email": e.utilisateur.email,
+                "telephone": getattr(e.utilisateur, 'telephone', None),
+                "actif": e.utilisateur.actif,
+                "matricule": e.matricule,
+                "promotion": e.promotion.libelle,
+                "filiere": e.promotion.filiere.nom_filiere,
+                "date_inscription": e.date_inscription.isoformat() if e.date_inscription else None,
+                "statut": e.statut
+            } for e in etudiants
         ]
     }
 

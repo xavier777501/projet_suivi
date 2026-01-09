@@ -192,24 +192,300 @@
     font-weight: 500;
 }
 
+/* Contenu principal */
+.dashboard-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.dashboard-left,
+.dashboard-right {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
 /* Cartes Globales */
 .dashboard-card {
     background-color: var(--surface-color);
     border-radius: 16px;
     border: 1px solid var(--border-color);
-    margin-bottom: 24px;
     overflow: hidden;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    height: fit-content;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
     border-bottom: 1px solid var(--border-color);
-    padding: 16px 20px;
+    padding: 20px 24px;
     background-color: rgba(255, 255, 255, 0.02);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .card-content {
-    padding: 20px;
+    padding: 24px;
+}
+
+/* Styles pour la répartition par filière */
+.filiere-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.filiere-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filiere-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.filiere-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.filiere-count {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.filiere-bar {
+    height: 8px;
+    background-color: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.filiere-progress {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
+    border-radius: 4px;
+    transition: width 0.8s ease-in-out;
+}
+
+/* Styles pour les promotions actives */
+.promotions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.promotion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.promotion-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent-color);
+}
+
+.promotion-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.promotion-info p {
+    margin: 0 0 2px 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.promotion-info small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.promotion-count {
+    text-align: center;
+    padding: 8px 12px;
+    background-color: var(--accent-color);
+    border-radius: 8px;
+    min-width: 60px;
+}
+
+.promotion-count span {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+}
+
+.promotion-count small {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Styles pour les statistiques des travaux */
+.travaux-stats-circular {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.travaux-item-circular {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.travaux-item-circular:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    transform: translateY(-2px);
+}
+
+.travaux-item-circular.total {
+    grid-column: span 2;
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: var(--accent-color);
+}
+
+.travaux-info {
+    text-align: center;
+}
+
+.travaux-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.travaux-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+/* Styles pour l'activité récente */
+.activite-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activite-item {
+    padding: 16px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.activite-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--accent-color);
+}
+
+.activite-info h4 {
+    margin: 0 0 6px 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.activite-info p {
+    margin: 0 0 4px 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.activite-info small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+/* Styles pour les alertes */
+.alert-card {
+    border-color: var(--error-color);
+    background-color: rgba(239, 68, 68, 0.05);
+}
+
+.alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background-color: rgba(239, 68, 68, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.alert-item svg {
+    color: var(--error-color);
+    flex-shrink: 0;
+}
+
+.alert-item p {
+    margin: 0 0 2px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.alert-item small {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Message "pas de données" */
+.no-data {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 40px 20px;
+    font-size: 0.9rem;
 }
 
 /* Grille des onglets spécifiques */
@@ -266,3 +542,303 @@
 
 /* Masquage des anciens styles redondants si nécessaire */
 /* ... le reste du fichier pourra être ajouté ou remplacé si des problèmes persistent ... */
+
+/* Styles améliorés pour la section tableau */
+.table-section {
+    margin-top: 40px;
+    background-color: var(--surface-color);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.table-section h2 {
+    margin: 0;
+    padding: 20px 24px;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(255, 255, 255, 0.02);
+    text-align: center;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    table-layout: fixed;
+}
+
+.data-table thead {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.data-table th {
+    padding: 16px 12px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.data-table td {
+    padding: 16px 12px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    vertical-align: middle;
+    text-align: center;
+    word-wrap: break-word;
+}
+
+/* Colonnes spécifiques pour un meilleur alignement */
+.data-table th:nth-child(1),
+.data-table td:nth-child(1) {
+    width: 15%;
+}
+
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) {
+    width: 15%;
+}
+
+.data-table th:nth-child(3),
+.data-table td:nth-child(3) {
+    width: 25%;
+}
+
+.data-table th:nth-child(4),
+.data-table td:nth-child(4) {
+    width: 20%;
+}
+
+.data-table th:nth-child(5),
+.data-table td:nth-child(5) {
+    width: 15%;
+}
+
+.data-table th:nth-child(6),
+.data-table td:nth-child(6) {
+    width: 10%;
+}
+
+/* Pour les tableaux avec 7 colonnes (espaces) */
+.data-table th:nth-child(7),
+.data-table td:nth-child(7) {
+    width: 15%;
+}
+
+.data-table tbody tr {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.data-table tbody tr:hover {
+    background-color: rgba(37, 99, 235, 0.08);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .data-table tbody tr:hover {
+    background-color: rgba(37, 99, 235, 0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Styles pour les éléments dans les cellules */
+.data-table code {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--accent-color);
+}
+
+/* Responsive pour le tableau */
+@media (max-width: 768px) {
+    .table-container {
+        border-radius: 0;
+    }
+    
+    .data-table {
+        table-layout: auto;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 12px 8px;
+        font-size: 0.8rem;
+        width: auto !important;
+    }
+    
+    .data-table th:nth-child(n),
+    .data-table td:nth-child(n) {
+        width: auto !important;
+    }
+}
+
+/* Responsive pour le dashboard */
+@media (max-width: 1200px) {
+    .dashboard-main {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .stats-grid-compact {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container,
+    .de-dashboard {
+        padding: 16px;
+    }
+    
+    .dashboard-header {
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    
+    .header-content {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+    
+    .header-title {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .stats-grid-compact {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .stat-card-compact {
+        padding: 16px;
+        gap: 12px;
+    }
+    
+    .dashboard-nav {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .nav-tab {
+        padding: 8px 16px;
+        font-size: 0.8rem;
+    }
+    
+    .card-content {
+        padding: 20px;
+    }
+    
+    .card-header {
+        padding: 16px 20px;
+    }
+    
+    .card-header h2 {
+        font-size: 1rem;
+    }
+    
+    .travaux-stats-circular {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .travaux-item-circular.total {
+        grid-column: span 1;
+    }
+    
+    .promotion-item {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .promotion-count {
+        align-self: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container,
+    .de-dashboard {
+        padding: 12px;
+    }
+    
+    .dashboard-header {
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+    
+    .header-title h1 {
+        font-size: 1.5rem;
+    }
+    
+    .stats-grid-compact {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .stat-card-compact {
+        padding: 12px;
+        gap: 8px;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 1.25rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+    }
+    
+    .card-content {
+        padding: 16px;
+    }
+    
+    .card-header {
+        padding: 12px 16px;
+    }
+    
+    .filiere-info {
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+    }
+    
+    .promotion-item {
+        padding: 12px;
+    }
+    
+    .activite-item {
+        padding: 12px;
+    }
+    
+    .alert-item {
+        padding: 10px;
+    }
+}
