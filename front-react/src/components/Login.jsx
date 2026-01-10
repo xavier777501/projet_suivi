@@ -87,7 +87,7 @@ function Login({ onLoginSuccess }) {
 
         {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
           <div className="form-group">
             <label htmlFor="email">Adresse email</label>
             <div className="input-wrapper">
@@ -100,6 +100,7 @@ function Login({ onLoginSuccess }) {
                 required
                 placeholder="votre@email.com"
                 className="modern-input"
+                autoComplete="off"
               />
               <div className="input-icon-right">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -122,6 +123,7 @@ function Login({ onLoginSuccess }) {
                 required
                 placeholder="Entrez votre mot de passe"
                 className="modern-input"
+                autoComplete="off"
               />
               <button
                 type="button"
