@@ -56,13 +56,13 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     current_hash = hashlib.sha256(plain_password.encode()).hexdigest()
     if current_hash == hashed_password:
         return True
-    
+
     # Compatibilité MD5
     if hashlib.md5(plain_password.encode()).hexdigest() == hashed_password:
         return True
-    
+
     # Correspondance exacte (non recommandé mais présent pour compatibilité initiale)
     if plain_password == hashed_password:
         return True
-    
+
     return False

@@ -156,6 +156,13 @@ async def assigner_formateur_espace(
         raise HTTPException(status_code=404, detail="Espace non trouvé")
         
     if data.id_formateur:
+        # Vérifier si un formateur est déjà assigné (restriction demandée : "il refuse")
+        if espace.id_formateur and espace.id_formateur != data.id_formateur:
+            raise HTTPException(
+                status_code=400, 
+                detail="Un formateur est déjà assigné à cet espace. Désassignez-le d'abord."
+            )
+            
         formateur = db.query(Formateur).filter(Formateur.id_formateur == data.id_formateur).first()
         if not formateur:
             raise HTTPException(status_code=404, detail="Formateur non trouvé")
@@ -238,14 +245,22 @@ async def consulter_statistiques_espace(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user)
 ):
-    """Consulter les statistiques détaillées d'un espace pédagogique (DE uniquement)"""
-    if current_user.role != RoleEnum.DE:
-        raise HTTPException(status_code=403, detail="Accès réservé au DE")
-
+    """Consulter les statistiques détaillées d'un espace pédagogique (DE ou Formateur assigné)"""
     # Vérifier que l'espace existe
     espace = db.query(EspacePedagogique).filter(EspacePedagogique.id_espace == id_espace).first()
     if not espace:
         raise HTTPException(status_code=404, detail="Espace pédagogique non trouvé")
+
+    # Vérifier les permissions
+    if current_user.role == RoleEnum.FORMATEUR:
+        formateur = db.query(Formateur).filter(Formateur.identifiant == current_user.identifiant).first()
+        if not formateur or espace.id_formateur != formateur.id_formateur:
+            raise HTTPException(
+                status_code=403, 
+                detail="Vous n'êtes pas le formateur assigné à cet espace"
+            )
+    elif current_user.role != RoleEnum.DE:
+        raise HTTPException(status_code=403, detail="Accès réservé au DE ou au formateur assigné")
 
     # Informations générales de l'espace
     formateur_info = None
@@ -267,6 +282,7 @@ async def consulter_statistiques_espace(
     for inscription in inscriptions:
         if inscription.etudiant and inscription.etudiant.utilisateur:
             etudiants_details.append({
+                "id_etudiant": inscription.etudiant.id_etudiant,
                 "nom": inscription.etudiant.utilisateur.nom,
                 "prenom": inscription.etudiant.utilisateur.prenom,
                 "email": inscription.etudiant.utilisateur.email,
@@ -309,6 +325,7 @@ async def consulter_statistiques_espace(
             assignations_stats["notees"] += assignations_travail["notees"]
             
             travaux_details.append({
+                "id_travail": travail.id_travail,
                 "titre": travail.titre,
                 "description": travail.description,
                 "type_travail": travail.type_travail,
@@ -354,5 +371,47 @@ async def consulter_statistiques_espace(
         },
         "etudiants": etudiants_details,
         "travaux": travaux_details
+    }
+
+@router.get("/espace/{id_espace}/etudiants")
+async def lister_etudiants_espace(
+    id_espace: str,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Lister les étudiants inscrits dans un espace spécifique (DE ou Formateur assigné)"""
+    
+    # Vérifier que l'espace existe
+    espace = db.query(EspacePedagogique).filter(EspacePedagogique.id_espace == id_espace).first()
+    if not espace:
+        raise HTTPException(status_code=404, detail="Espace pédagogique non trouvé")
+    
+    # Vérifier les permissions
+    if current_user.role == RoleEnum.FORMATEUR:
+        formateur = db.query(Formateur).filter(Formateur.identifiant == current_user.identifiant).first()
+        if not formateur or espace.id_formateur != formateur.id_formateur:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Vous n'êtes pas le formateur assigné à cet espace"
+            )
+    elif current_user.role != RoleEnum.DE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès non autorisé"
+        )
+
+    # Récupérer les inscriptions avec chargement des relations
+    inscriptions = db.query(Inscription).filter(Inscription.id_espace == id_espace).all()
+    
+    return {
+        "etudiants": [
+            {
+                "id_etudiant": ins.etudiant.id_etudiant,
+                "nom": ins.etudiant.utilisateur.nom,
+                "prenom": ins.etudiant.utilisateur.prenom,
+                "email": ins.etudiant.utilisateur.email,
+                "matricule": ins.etudiant.matricule
+            } for ins in inscriptions if ins.etudiant and ins.etudiant.utilisateur
+        ]
     }
 

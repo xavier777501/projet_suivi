@@ -54,11 +54,22 @@ async def creer_compte_formateur(
     mot_de_passe = generer_mot_de_passe_aleatoire()
     id_formateur = generer_identifiant_unique("FORMATEUR")
     numero_employe = generer_numero_employe()
-    
+
+    # Hacher le mot de passe
+    mot_de_passe_hache = hash_password(mot_de_passe)
+
+    # Affichage des identifiants dans la console (pour l'équipe locale)
+    print("\n" + "="*60)
+    print(f"NOUVEAU COMPTE FORMATEUR CRÉÉ")
+    print(f"Email       : {formateur_data.email}")
+    print(f"Identifiant : {identifiant}")
+    print(f"Mot de passe: {mot_de_passe}")
+    print("="*60 + "\n")
+
     nouvel_utilisateur = Utilisateur(
         identifiant=identifiant,
         email=formateur_data.email,
-        mot_de_passe=hash_password(mot_de_passe),
+        mot_de_passe=mot_de_passe_hache,
         nom=formateur_data.nom,
         prenom=formateur_data.prenom,
         role=RoleEnum.FORMATEUR,
@@ -304,12 +315,23 @@ async def creer_compte_etudiant(
     mot_de_passe = generer_mot_de_passe_aleatoire()
     id_etudiant = generer_identifiant_unique("ETUDIANT")
     matricule = generer_matricule_unique()
-    
+
+    # Hacher le mot de passe
+    mot_de_passe_hache = hash_password(mot_de_passe)
+
+    # Affichage des identifiants dans la console (pour l'équipe locale)
+    print("\n" + "="*60)
+    print(f"NOUVEAU COMPTE ÉTUDIANT CRÉÉ")
+    print(f"Email       : {etudiant_data.email}")
+    print(f"Identifiant : {identifiant}")
+    print(f"Mot de passe: {mot_de_passe}")
+    print("="*60 + "\n")
+
     # 3. Création utilisateur
     nouvel_utilisateur = Utilisateur(
         identifiant=identifiant,
         email=etudiant_data.email,
-        mot_de_passe=hash_password(mot_de_passe),
+        mot_de_passe=mot_de_passe_hache,
         nom=etudiant_data.nom,
         prenom=etudiant_data.prenom,
         role=RoleEnum.ETUDIANT,
@@ -416,3 +438,109 @@ async def creer_promotion(
     db.commit()
 
     return {"message": "Promotion créée avec succès", "id_promotion": promotion.id_promotion}
+
+
+@router.post("/reinitialiser-mot-de-passe/{email_utilisateur}", status_code=status.HTTP_200_OK)
+async def reinitialiser_mot_de_passe(
+    email_utilisateur: str,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Réinitialise le mot de passe d'un utilisateur existant (réservé au DE)"""
+
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Seul un Directeur d'Établissement peut réinitialiser les mots de passe"
+        )
+
+    utilisateur = db.query(Utilisateur).filter(Utilisateur.email == email_utilisateur).first()
+    if not utilisateur:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur non trouvé"
+        )
+
+    # Générer un nouveau mot de passe
+    nouveau_mot_de_passe = generer_mot_de_passe_aleatoire()
+    nouveau_mot_de_passe_hache = hash_password(nouveau_mot_de_passe)
+
+    # Mettre à jour le mot de passe
+    utilisateur.mot_de_passe = nouveau_mot_de_passe_hache
+    utilisateur.mot_de_passe_temporaire = True
+
+    # Générer un token d'activation pour forcer le changement de mot de passe
+    token_activation = generer_token_activation()
+    date_expiration = datetime.utcnow() + timedelta(hours=24)
+    utilisateur.token_activation = token_activation
+    utilisateur.date_expiration_token = date_expiration
+
+    db.commit()
+
+    # Envoyer l'email avec les nouveaux identifiants
+    success = email_service.envoyer_email_creation_compte(
+        destinataire=utilisateur.email,
+        prenom=utilisateur.prenom,
+        email=utilisateur.email,
+        mot_de_passe=nouveau_mot_de_passe,
+        role=utilisateur.role.value
+    )
+
+    if success:
+        # Affichage des identifiants dans la console (pour l'équipe locale)
+        print("\n" + "="*60)
+        print(f"RÉINITIALISATION MOT DE PASSE")
+        print(f"Email       : {utilisateur.email}")
+        print(f"Identifiant : {utilisateur.identifiant}")
+        print(f"Nouveau MDP : {nouveau_mot_de_passe}")
+        print("="*60 + "\n")
+        
+        return {
+            "message": "Mot de passe réinitialisé avec succès",
+            "email_envoye": True,
+            "nouveau_mot_de_passe_genere": nouveau_mot_de_passe
+        }
+    else:
+        print(f"ERREUR: Impossible d'envoyer l'email de réinitialisation à {utilisateur.email}")
+        return {
+            "message": "Mot de passe réinitialisé mais email non envoyé",
+            "email_envoye": False,
+            "nouveau_mot_de_passe_genere": nouveau_mot_de_passe
+        }
+
+
+@router.post("/reparer-utilisateurs", status_code=status.HTTP_200_OK)
+async def reparer_tous_utilisateurs(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """Répare tous les utilisateurs avec des problèmes d'authentification (réservé au DE)"""
+
+    if current_user.role != RoleEnum.DE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Seul un Directeur d'Établissement peut réparer les utilisateurs"
+        )
+
+    from utils.repair_users import verifier_integrite_utilisateurs, reparer_utilisateurs_douteux
+
+    # Vérifier l'intégrité avant
+    problemes_avant = verifier_integrite_utilisateurs(db)
+
+    if problemes_avant > 0:
+        # Réparer les utilisateurs
+        reparer_utilisateurs_douteux(db)
+
+        # Vérifier l'intégrité après
+        problemes_apres = verifier_integrite_utilisateurs(db)
+
+        return {
+            "message": "Réparation terminée",
+            "problemes_corriges": problemes_avant - problemes_apres,
+            "problemes_restants": problemes_apres
+        }
+    else:
+        return {
+            "message": "Aucun problème détecté",
+            "problemes_restants": 0
+        }

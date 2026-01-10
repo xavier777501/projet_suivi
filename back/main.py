@@ -1,6 +1,9 @@
 from datetime import date
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from database.database import Base, engine, SessionLocal
 import models  # ensure all models are imported so tables are created
@@ -21,14 +24,14 @@ def initialiser_systeme():
         # 1. Initialiser compte DE
         compte_de = initialiser_compte_de(db)
         if compte_de:
-            print(f"✓ Compte DE initialisé: {compte_de['email']}")
+            print(f"OK Compte DE initialisé: {compte_de['email']}")
             if compte_de['mot_de_passe_temporaire']:
-                print("🔑 Mot de passe temporaire: admin123")
-                print("⚠️  Ce mot de passe doit être changé lors de la première connexion!")
+                print("Mot de passe temporaire: admin123")
+                print("ATTENTION: Ce mot de passe doit être changé lors de la première connexion!")
             else:
-                print("✓ Le compte DE utilise déjà un mot de passe permanent")
+                print("OK Le compte DE utilise déjà un mot de passe permanent")
         else:
-            print("✗ Erreur lors de l'initialisation du compte DE")
+            print("ERREUR lors de l'initialisation du compte DE")
 
         # 2. Initialiser Données de Référence (Filiere + Matieres)
         filiere_info = {
@@ -47,9 +50,9 @@ def initialiser_systeme():
             )
             db.add(new_filiere)
             db.commit()
-            print(f"✓ Filière créée: {filiere_info['nom']}")
+            print(f"OK Filière créée: {filiere_info['nom']}")
         else:
-            print(f"✓ Filière existante: {filiere_info['nom']}")
+            print(f"OK Filière existante: {filiere_info['nom']}")
 
         # Matieres par défaut pour cette filière
         matieres_defaut = [
@@ -72,10 +75,10 @@ def initialiser_systeme():
                 print(f"  + Matière ajoutée: {mat['nom']}")
         
         db.commit()
-        print("✓ Matières initialisées")
+        print("OK Matières initialisées")
 
     except Exception as e:
-        print(f"✗ Erreur critique lors de l'initialisation: {e}")
+        print(f"ERREUR critique lors de l'initialisation: {e}")
         db.rollback()
     finally:
         db.close()
@@ -114,6 +117,10 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"]
 # Inclure les routes d'espaces pédagogiques
 from routes import espaces_pedagogiques
 app.include_router(espaces_pedagogiques.router)
+
+# Inclure les routes de travaux
+from routes import travaux
+app.include_router(travaux.router)
 
 @app.get("/")
 def home():

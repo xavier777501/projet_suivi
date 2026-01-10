@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { espacesPedagogiquesAPI } from '../../services/api';
+import { espacesPedagogiquesAPI, travauxAPI } from '../../services/api';
 import {
     X,
     Users,
@@ -14,7 +14,10 @@ import {
     CheckCircle,
     AlertCircle,
     Award,
-    Info
+    Info,
+    Send,
+    ChevronRight,
+    Check
 } from 'lucide-react';
 import './ConsulterEspace.css';
 
@@ -23,6 +26,17 @@ const ConsulterEspace = ({ espace, onClose }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('general'); // 'general', 'etudiants', 'travaux'
+    
+    // États pour l'assignation (US 6.1)
+    const [isAssigning, setIsAssigning] = useState(false);
+    const [selectedTravail, setSelectedTravail] = useState(null);
+    const [selectedEtudiants, setSelectedEtudiants] = useState([]);
+    const [dateEcheanceOverride, setDateEcheanceOverride] = useState('');
+    const [assigningLoading, setAssigningLoading] = useState(false);
+    const [assigningSuccess, setAssigningSuccess] = useState(null);
+
+    const userData = JSON.parse(localStorage.getItem('userData'));
+    const isFormateur = userData?.role?.toUpperCase() === 'FORMATEUR';
 
     useEffect(() => {
         chargerStatistiques();
@@ -38,6 +52,71 @@ const ConsulterEspace = ({ espace, onClose }) => {
             setError('Impossible de charger les statistiques de l\'espace');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleStartAssignation = (travail) => {
+        setSelectedTravail(travail);
+        setIsAssigning(true);
+        setActiveTab('etudiants');
+        // Pré-remplir la date d'échéance si elle existe
+        if (travail.date_echeance) {
+            const date = new Date(travail.date_echeance);
+            const formattedDate = date.toISOString().slice(0, 16);
+            setDateEcheanceOverride(formattedDate);
+        }
+    };
+
+    const handleCancelAssignation = () => {
+        setIsAssigning(false);
+        setSelectedTravail(null);
+        setSelectedEtudiants([]);
+        setDateEcheanceOverride('');
+        setAssigningSuccess(null);
+    };
+
+    const toggleEtudiantSelection = (idEtudiant) => {
+        if (!selectedTravail) return;
+
+        if (selectedTravail.type_travail === 'INDIVIDUEL') {
+            setSelectedEtudiants(prev => prev.includes(idEtudiant) ? [] : [idEtudiant]);
+        } else {
+            setSelectedEtudiants(prev => 
+                prev.includes(idEtudiant) 
+                    ? prev.filter(id => id !== idEtudiant)
+                    : [...prev, idEtudiant]
+            );
+        }
+    };
+
+    const handleAssigner = async () => {
+        if (!selectedTravail || selectedEtudiants.length === 0) return;
+
+        try {
+            setAssigningLoading(true);
+            setError(null);
+            
+            const payload = {
+                id_travail: selectedTravail.id_travail,
+                etudiants_ids: selectedEtudiants,
+                date_echeance: dateEcheanceOverride || null
+            };
+
+            await travauxAPI.assignerTravail(payload);
+            
+            setAssigningSuccess(`Travail assigné avec succès à ${selectedEtudiants.length} étudiant(s)`);
+            
+            // Recharger les stats après un court délai
+            setTimeout(() => {
+                chargerStatistiques();
+                handleCancelAssignation();
+            }, 2000);
+
+        } catch (err) {
+            console.error('Erreur lors de l\'assignation:', err);
+            setError(err.response?.data?.detail || 'Une erreur est survenue lors de l\'assignation');
+        } finally {
+            setAssigningLoading(false);
         }
     };
 
@@ -189,28 +268,89 @@ const ConsulterEspace = ({ espace, onClose }) => {
         <div className="tab-content">
             <div className="section-header">
                 <h3><Users size={20} /> Étudiants inscrits ({etudiants.length})</h3>
+                {isAssigning && (
+                    <div className="assignation-banner">
+                        <div className="assignation-info-text">
+                            <Info size={16} />
+                            <span>
+                                Sélection d'étudiants pour : <strong>{selectedTravail.titre}</strong> 
+                                ({selectedTravail.type_travail})
+                            </span>
+                        </div>
+                        <button onClick={handleCancelAssignation} className="btn-cancel-assign">
+                            Annuler
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {assigningSuccess && (
+                <div className="success-message-banner">
+                    <Check size={18} /> {assigningSuccess}
+                </div>
+            )}
             
             {etudiants.length > 0 ? (
-                <div className="etudiants-list">
-                    {etudiants.map((etudiant, index) => (
-                        <div key={index} className="etudiant-card">
-                            <div className="etudiant-info">
-                                <h4>{etudiant.prenom} {etudiant.nom}</h4>
-                                <p><Mail size={14} /> {etudiant.email}</p>
-                                <p><Hash size={14} /> {etudiant.matricule}</p>
+                <>
+                    <div className="etudiants-list">
+                        {etudiants.map((etudiant, index) => {
+                            const isSelected = selectedEtudiants.includes(etudiant.id_etudiant);
+                            return (
+                                <div 
+                                    key={index} 
+                                    className={`etudiant-card ${isAssigning ? 'selectable' : ''} ${isSelected ? 'selected' : ''}`}
+                                    onClick={() => isAssigning && toggleEtudiantSelection(etudiant.id_etudiant)}
+                                >
+                                    {isAssigning && (
+                                        <div className={`selection-indicator ${isSelected ? 'selected' : ''}`}>
+                                            {isSelected && <Check size={14} />}
+                                        </div>
+                                    )}
+                                    <div className="etudiant-info">
+                                        <h4>{etudiant.prenom} {etudiant.nom}</h4>
+                                        <p><Mail size={14} /> {etudiant.email}</p>
+                                        <p><Hash size={14} /> {etudiant.matricule}</p>
+                                    </div>
+                                    <div className="etudiant-meta">
+                                        <span className={`statut-badge ${etudiant.statut.toLowerCase()}`}>
+                                            {etudiant.statut}
+                                        </span>
+                                        {!isAssigning && (
+                                            <small>
+                                                Inscrit le {new Date(etudiant.date_inscription).toLocaleDateString('fr-FR')}
+                                            </small>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {isAssigning && (
+                        <div className="assignation-footer">
+                            <div className="echeance-input-group">
+                                <label><Clock size={16} /> Date d'échéance (optionnelle) :</label>
+                                <input 
+                                    type="datetime-local" 
+                                    value={dateEcheanceOverride}
+                                    onChange={(e) => setDateEcheanceOverride(e.target.value)}
+                                    className="input-echeance"
+                                />
                             </div>
-                            <div className="etudiant-meta">
-                                <span className={`statut-badge ${etudiant.statut.toLowerCase()}`}>
-                                    {etudiant.statut}
-                                </span>
-                                <small>
-                                    Inscrit le {new Date(etudiant.date_inscription).toLocaleDateString('fr-FR')}
-                                </small>
-                            </div>
+                            <button 
+                                className="btn-confirm-assign"
+                                disabled={selectedEtudiants.length === 0 || assigningLoading}
+                                onClick={handleAssigner}
+                            >
+                                {assigningLoading ? (
+                                    <div className="spinner-small"></div>
+                                ) : (
+                                    <><Send size={18} /> Confirmer l'assignation ({selectedEtudiants.length})</>
+                                )}
+                            </button>
                         </div>
-                    ))}
-                </div>
+                    )}
+                </>
             ) : (
                 <div className="empty-state">
                     <Users size={48} color="#9ca3af" />
@@ -231,10 +371,20 @@ const ConsulterEspace = ({ espace, onClose }) => {
                     {travaux.map((travail, index) => (
                         <div key={index} className="travail-card">
                             <div className="travail-header">
-                                <h4>{travail.titre}</h4>
-                                <span className={`type-badge ${travail.type_travail.toLowerCase()}`}>
-                                    {travail.type_travail}
-                                </span>
+                                <div className="travail-title-group">
+                                    <h4>{travail.titre}</h4>
+                                    <span className={`type-badge ${travail.type_travail.toLowerCase()}`}>
+                                        {travail.type_travail}
+                                    </span>
+                                </div>
+                                {isFormateur && (
+                                    <button 
+                                        className="btn-assign-work"
+                                        onClick={() => handleStartAssignation(travail)}
+                                    >
+                                        Assigner <ChevronRight size={16} />
+                                    </button>
+                                )}
                             </div>
                             
                             {travail.description && (

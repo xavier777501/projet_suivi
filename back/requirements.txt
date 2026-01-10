@@ -10,3 +10,4 @@ alembic>=1.13.0
 pytest>=8.0.0
 httpx>=0.26.00
 pytest-asyncio>=0.23.0
+python-dotenv>=1.0.0

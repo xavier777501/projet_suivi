@@ -17,25 +17,36 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
+  const handleToggleEtudiant = (id) => {
+    setSelectedEtudiants(prev => 
+      prev.includes(id) 
+        ? prev.filter(item => item !== id) 
+        : [...prev, id]
+    );
+  };
+
   useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
-    // Filtrer les étudiants selon le terme de recherche
+    // Filtrer les étudiants selon le terme de recherche et exclure ceux déjà inscrits
+    const inscritsIds = new Set(etudiantsInscrits.map(e => e.id_etudiant));
+    const disponibles = etudiants.filter(e => !inscritsIds.has(e.id_etudiant));
+    
     if (searchTerm.trim() === '') {
-      setFilteredEtudiants(etudiants);
+      setFilteredEtudiants(disponibles);
     } else {
-      const filtered = etudiants.filter(etudiant => {
+      const searchLower = searchTerm.toLowerCase();
+      const filtered = disponibles.filter(etudiant => {
         const fullName = `${etudiant.prenom} ${etudiant.nom}`.toLowerCase();
-        const searchLower = searchTerm.toLowerCase();
         return fullName.includes(searchLower) || 
                etudiant.email.toLowerCase().includes(searchLower) ||
                (etudiant.matricule && etudiant.matricule.toLowerCase().includes(searchLower));
       });
       setFilteredEtudiants(filtered);
     }
-  }, [etudiants, searchTerm]);
+  }, [etudiants, etudiantsInscrits, searchTerm]);
 
   const loadData = async () => {
     try {
@@ -65,9 +76,18 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
   };
 
   const handleAssignFormateur = async () => {
+    setError(null);
+    setSuccess(null);
+
     // Validation : vérifier qu'un formateur est sélectionné
     if (!selectedFormateur) {
       setError('Veuillez sélectionner un formateur');
+      return;
+    }
+
+    // Vérifier si un formateur est déjà assigné (restriction : "il refuse")
+    if (espace.id_formateur && selectedFormateur && selectedFormateur !== espace.id_formateur) {
+      setError('Action refusée : Un formateur est déjà assigné à cet espace. Désassignez-le d\'abord.');
       return;
     }
 
@@ -78,8 +98,6 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
     }
 
     setLoading(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       await espacesPedagogiquesAPI.assignerFormateur(espace.id_espace, selectedFormateur);
@@ -109,10 +127,15 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
     try {
       await espacesPedagogiquesAPI.ajouterEtudiants(espace.id_espace, selectedEtudiants);
       setSuccess(`${selectedEtudiants.length} étudiant(s) ajouté(s) avec succès !`);
+      
+      // Rafraîchir les données locales pour masquer les étudiants ajoutés
+      const statistiquesRes = await espacesPedagogiquesAPI.consulterStatistiques(espace.id_espace);
+      setEtudiantsInscrits(statistiquesRes.data.etudiants || []);
       setSelectedEtudiants([]);
       
       setTimeout(() => {
-        onSuccess();
+        setSuccess(null);
+        onSuccess(); // Notifie le parent pour mettre à jour le compteur
       }, 1500);
     } catch (err) {
       console.error('Erreur ajout étudiants:', err);
@@ -195,9 +218,26 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
 
           {/* Gestion des étudiants */}
           <div className="form-group">
-            <label>
-              <Users size={16} />
-              Ajouter des étudiants ({selectedEtudiants.length} sélectionné(s))
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={16} />
+                Ajouter des étudiants ({selectedEtudiants.length} sélectionné(s))
+              </div>
+              {selectedEtudiants.length > 0 && (
+                <button 
+                  onClick={() => setSelectedEtudiants([])}
+                  style={{ 
+                    fontSize: '0.75rem', 
+                    color: '#ef4444', 
+                    background: 'none', 
+                    border: 'none', 
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  Tout désélectionner
+                </button>
+              )}
             </label>
             
             {/* Champ de recherche */}
@@ -246,72 +286,110 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
             
             {/* Liste des étudiants disponibles pour sélection */}
             <div style={{ 
-              maxHeight: '200px', 
+              maxHeight: '280px', 
               overflowY: 'auto', 
               border: '1px solid #d1d5db', 
-              borderRadius: '6px',
-              padding: '0.5rem'
+              borderRadius: '8px',
+              padding: '0.5rem',
+              backgroundColor: '#ffffff'
             }}>
               {filteredEtudiants.length > 0 ? (
                 <>
                   {/* Bouton Tout sélectionner */}
-                  <div style={{
-                    padding: '0.5rem',
-                    borderBottom: '1px solid #e5e7eb',
-                    backgroundColor: '#f9fafb',
-                    marginBottom: '0.5rem',
-                    borderRadius: '4px'
-                  }}>
-                    <label style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                  <div 
+                    onClick={() => {
+                      if (selectedEtudiants.length === filteredEtudiants.length) {
+                        setSelectedEtudiants([]);
+                      } else {
+                        setSelectedEtudiants(filteredEtudiants.map(e => e.id_etudiant));
+                      }
+                    }}
+                    style={{
+                      padding: '0.75rem',
+                      borderBottom: '2px solid #e5e7eb',
+                      backgroundColor: '#f8fafc',
+                      marginBottom: '0.5rem',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
                       cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '500'
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                  >
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '4px',
+                      border: '2px solid',
+                      borderColor: selectedEtudiants.length === filteredEtudiants.length && filteredEtudiants.length > 0 ? '#3b82f6' : '#d1d5db',
+                      backgroundColor: selectedEtudiants.length === filteredEtudiants.length && filteredEtudiants.length > 0 ? '#3b82f6' : 'transparent',
+                      marginRight: '1rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      flexShrink: 0
                     }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedEtudiants.length === filteredEtudiants.length && filteredEtudiants.length > 0}
-                        onChange={() => {
-                          if (selectedEtudiants.length === filteredEtudiants.length) {
-                            setSelectedEtudiants([]);
-                          } else {
-                            setSelectedEtudiants(filteredEtudiants.map(e => e.id_etudiant));
-                          }
-                        }}
-                        style={{ marginRight: '0.5rem' }}
-                      />
-                      Tout sélectionner ({filteredEtudiants.length} étudiants)
-                    </label>
+                      {selectedEtudiants.length === filteredEtudiants.length && filteredEtudiants.length > 0 && (
+                        <div style={{ width: '8px', height: '8px', backgroundColor: 'white', borderRadius: '1px' }} />
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#1e293b' }}>
+                      Tout sélectionner ({filteredEtudiants.length} étudiants disponibles)
+                    </span>
                   </div>
                   
                   {/* Liste des étudiants */}
                   {filteredEtudiants.map((etudiant) => (
                     <div 
                       key={etudiant.id_etudiant}
+                      className={`student-selection-item ${selectedEtudiants.includes(etudiant.id_etudiant) ? 'selected' : ''}`}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        padding: '0.5rem',
+                        padding: '0.75rem',
                         borderBottom: '1px solid #f3f4f6',
                         cursor: 'pointer',
                         backgroundColor: selectedEtudiants.includes(etudiant.id_etudiant) ? '#eff6ff' : 'transparent',
-                        borderRadius: '4px',
-                        margin: '0.25rem 0'
+                        borderRadius: '8px',
+                        margin: '0.25rem 0',
+                        transition: 'all 0.2s ease',
+                        border: selectedEtudiants.includes(etudiant.id_etudiant) ? '1px solid #3b82f6' : '1px solid transparent'
                       }}
                       onClick={() => handleToggleEtudiant(etudiant.id_etudiant)}
+                      onMouseEnter={(e) => {
+                        if (!selectedEtudiants.includes(etudiant.id_etudiant)) {
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!selectedEtudiants.includes(etudiant.id_etudiant)) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedEtudiants.includes(etudiant.id_etudiant)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleToggleEtudiant(etudiant.id_etudiant);
-                        }}
-                        style={{ marginRight: '0.75rem' }}
-                      />
+                      <div style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '4px',
+                        border: '2px solid',
+                        borderColor: selectedEtudiants.includes(etudiant.id_etudiant) ? '#3b82f6' : '#d1d5db',
+                        backgroundColor: selectedEtudiants.includes(etudiant.id_etudiant) ? '#3b82f6' : 'transparent',
+                        marginRight: '1rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0
+                      }}>
+                        {selectedEtudiants.includes(etudiant.id_etudiant) && (
+                          <div style={{ width: '8px', height: '8px', backgroundColor: 'white', borderRadius: '1px' }} />
+                        )}
+                      </div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>
+                        <div style={{ fontWeight: '600', fontSize: '0.875rem', color: '#111827' }}>
                           {etudiant.prenom} {etudiant.nom}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
