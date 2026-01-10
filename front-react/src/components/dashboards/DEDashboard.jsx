@@ -152,7 +152,7 @@ const DEDashboard = ({ onLogout }) => {
                 setActiveModal('promotion');
                 break;
             case 'create-espace':
-                setActiveModal('espace');
+                setActiveModal('create_espace');
                 break;
             default:
                 console.log('Action non reconnue:', actionId);
