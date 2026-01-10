@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { espacesPedagogiquesAPI, travauxAPI } from '../../services/api';
 import {
     X,
+    Plus,
     Users,
     BookOpen,
     Calendar,
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react';
 import './ConsulterEspace.css';
 
-const ConsulterEspace = ({ espace, onClose }) => {
+const ConsulterEspace = ({ espace, onClose, onAddTravail }) => {
     const [statistiques, setStatistiques] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -364,6 +365,14 @@ const ConsulterEspace = ({ espace, onClose }) => {
         <div className="tab-content">
             <div className="section-header">
                 <h3><FileText size={20} /> Travaux ({travaux.length})</h3>
+                {isFormateur && (
+                    <button 
+                        className="btn-add-travail" 
+                        onClick={() => onAddTravail && onAddTravail(espace)}
+                    >
+                        <Plus size={16} /> Nouveau Travail
+                    </button>
+                )}
             </div>
             
             {travaux.length > 0 ? (

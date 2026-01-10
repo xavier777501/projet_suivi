@@ -251,6 +251,10 @@ const FormateurDashboard = ({ onLogout }) => {
                 <ConsulterEspace 
                     espace={selectedEspace}
                     onClose={() => setSelectedEspace(null)}
+                    onAddTravail={(espace) => {
+                        setSelectedEspace(null); // Fermer le modal de consultation
+                        setActiveModal('create-travail');
+                    }}
                 />
             )}
         </div>
