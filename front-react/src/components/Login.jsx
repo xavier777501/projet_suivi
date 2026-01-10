@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { authAPI } from '../services/api'
 import './Login.css'
 
@@ -7,6 +7,27 @@ function Login({ onLoginSuccess }) {
     email: '',
     mot_de_passe: ''
   })
+
+  // Force les champs à être vides au montage du composant
+  useEffect(() => {
+    // Forcer les champs à être vides après un court délai
+    const timer = setTimeout(() => {
+      const emailInput = document.getElementById('email')
+      const passwordInput = document.getElementById('mot_de_passe')
+      
+      if (emailInput && emailInput.value !== formData.email) {
+        emailInput.value = ''
+        setFormData(prev => ({ ...prev, email: '' }))
+      }
+      
+      if (passwordInput && passwordInput.value !== formData.mot_de_passe) {
+        passwordInput.value = ''
+        setFormData(prev => ({ ...prev, mot_de_passe: '' }))
+      }
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -88,6 +109,10 @@ function Login({ onLoginSuccess }) {
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
+          {/* Champs cachés pour tromper l'auto-complétion */}
+          <input type="text" style={{display: 'none'}} />
+          <input type="password" style={{display: 'none'}} />
+          
           <div className="form-group">
             <label htmlFor="email">Adresse email</label>
             <div className="input-wrapper">
@@ -100,7 +125,10 @@ function Login({ onLoginSuccess }) {
                 required
                 placeholder="votre@email.com"
                 className="modern-input"
-                autoComplete="off"
+                autoComplete="new-email"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
               />
               <div className="input-icon-right">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -123,7 +151,10 @@ function Login({ onLoginSuccess }) {
                 required
                 placeholder="Entrez votre mot de passe"
                 className="modern-input"
-                autoComplete="off"
+                autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
               />
               <button
                 type="button"
