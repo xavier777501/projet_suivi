@@ -11,15 +11,11 @@ export const useTheme = () => {
 }
 
 export const ThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(true) // Par défaut en mode sombre
-
-  useEffect(() => {
-    // Charger le thème depuis localStorage
+  // Initialiser avec la valeur du localStorage ou mode sombre par défaut
+  const [isDarkMode, setIsDarkMode] = useState(() => {
     const savedTheme = localStorage.getItem('theme')
-    if (savedTheme) {
-      setIsDarkMode(savedTheme === 'dark')
-    }
-  }, [])
+    return savedTheme ? savedTheme === 'dark' : true // Par défaut en mode sombre si rien n'est sauvé
+  })
 
   useEffect(() => {
     // Appliquer le thème au document
