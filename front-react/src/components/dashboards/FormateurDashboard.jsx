@@ -18,6 +18,7 @@ const FormateurDashboard = ({ onLogout }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeModal, setActiveModal] = useState(null);
+    const [preselectedSpaceId, setPreselectedSpaceId] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -239,9 +240,10 @@ const FormateurDashboard = ({ onLogout }) => {
             {activeModal === 'create-travail' && (
                 <CreateTravail 
                     spaces={stats.mes_espaces}
-                    initialSpaceId={selectedEspace?.id_espace}
+                    initialSpaceId={preselectedSpaceId}
                     onClose={() => {
                         setActiveModal(null);
+                        setPreselectedSpaceId(null);
                     }}
                     onSuccess={handleCreateSuccess}
                 />
@@ -252,8 +254,9 @@ const FormateurDashboard = ({ onLogout }) => {
                     espace={selectedEspace}
                     onClose={() => setSelectedEspace(null)}
                     onAddTravail={(espace) => {
-                        setSelectedEspace(null); // Fermer le modal de consultation
+                        setPreselectedSpaceId(espace.id_espace);
                         setActiveModal('create-travail');
+                        setSelectedEspace(null);
                     }}
                 />
             )}
