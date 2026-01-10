@@ -97,6 +97,9 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
         )
     
     # Étape 4: Vérifier le mot de passe
+    # Nettoyage préventif des espaces
+    request.mot_de_passe = request.mot_de_passe.strip()
+    
     # Debug: Vérification du mot de passe
     print(f"Debug: Mot de passe fourni: {request.mot_de_passe}")
     print(f"Debug: Hash du mot de passe fourni: {get_password_hash(request.mot_de_passe)}")
@@ -287,18 +290,58 @@ def reset_tentatives(request: ResetTentativesRequest, db: Session = Depends(get_
     Route temporaire pour réinitialiser les tentatives de connexion
     """
     from datetime import datetime, timedelta
-    
+
     email = request.email
-    
+
     # Supprimer toutes les tentatives échouées pour cet email datant de moins de 15 minutes
     date_limite = datetime.utcnow() - timedelta(minutes=15)
-    
+
     db.query(TentativeConnexion).filter(
         TentativeConnexion.email == email,
         TentativeConnexion.succes == False,
         TentativeConnexion.date_tentative > date_limite
     ).delete()
-    
+
     db.commit()
-    
+
     return {"message": f"Tentatives de connexion réinitialisées pour {email}"}
+
+
+@router.post("/test-connexion")
+def test_connexion(email: str, mot_de_passe: str, db: Session = Depends(get_db)):
+    """
+    Route de test pour vérifier la connexion d'un utilisateur
+    """
+    print(f"🔍 TEST CONNEXION: Tentative de connexion pour {email}")
+
+    utilisateur = db.query(Utilisateur).filter(Utilisateur.email == email).first()
+
+    if not utilisateur:
+        print(f"❌ UTILISATEUR NON TROUVÉ: {email}")
+        return {"statut": "ERREUR", "message": "Utilisateur non trouvé"}
+
+    print(f"✅ UTILISATEUR TROUVÉ: {utilisateur.email}")
+    print(f"🔑 HASH EN BASE: {utilisateur.mot_de_passe}")
+
+    # Vérifier le mot de passe
+    verification = verify_password(mot_de_passe, utilisateur.mot_de_passe)
+    print(f"🔐 MOT DE PASSE FOURNI: {mot_de_passe}")
+    print(f"🔒 CORRESPONDANCE: {'OUI' if verification else 'NON'}")
+
+    if verification:
+        return {
+            "statut": "SUCCES",
+            "message": "Connexion réussie",
+            "utilisateur": {
+                "identifiant": utilisateur.identifiant,
+                "nom": utilisateur.nom,
+                "prenom": utilisateur.prenom,
+                "role": utilisateur.role,
+                "email": utilisateur.email
+            }
+        }
+    else:
+        return {
+            "statut": "ECHEC",
+            "message": "Mot de passe incorrect"
+        }

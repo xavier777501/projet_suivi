@@ -195,21 +195,32 @@ def get_formateur_dashboard(
         EspacePedagogique.id_espace, Matiere.nom_matiere, Promotion.libelle
     ).all()
     
+    # Pour chaque espace, compter le nombre d'étudiants
+    espaces_data = []
+    for row in mes_espaces:
+        nombre_etudiants = db.query(Etudiant).join(
+            Promotion, Etudiant.id_promotion == Promotion.id_promotion
+        ).join(
+            EspacePedagogique, Promotion.id_promotion == EspacePedagogique.id_promotion
+        ).filter(
+            EspacePedagogique.id_espace == row.id_espace
+        ).count()
+        
+        espaces_data.append({
+            "id_espace": row.id_espace,
+            "matiere": row.nom_matiere,
+            "promotion": row.promotion,
+            "nombre_travaux": row.nombre_travaux or 0,
+            "nombre_etudiants": nombre_etudiants
+        })
+    
     return {
         "formateur": {
             "nom": current_user.nom,
             "prenom": current_user.prenom,
             "matiere": formateur.matiere.nom_matiere if formateur.matiere else None
         },
-        "mes_espaces": [
-            {
-                "id_espace": row.id_espace,
-                "matiere": row.nom_matiere,
-                "promotion": row.promotion,
-                "nombre_travaux": row.nombre_travaux or 0
-            }
-            for row in mes_espaces
-        ]
+        "mes_espaces": espaces_data
     }
 
 @router.get("/etudiant")

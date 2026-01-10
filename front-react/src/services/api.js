@@ -106,18 +106,24 @@ export const espacesPedagogiquesAPI = {
     api.get(`/api/espaces-pedagogiques/promotion/${idPromotion}/etudiants`),
 
   // Formateur - Mes espaces
-  mesEspaces: () => api.get('/api/espaces-pedagogiques/mes-espaces'),
+  mesEspaces: () => api.get('/api/dashboard/formateur'), // Utilise le dashboard formateur pour l'instant
   listerEtudiantsEspace: (idEspace) => api.get(`/api/espaces-pedagogiques/espace/${idEspace}/etudiants`),
 
   // DE - Gestion avancée espace
   consulterStatistiques: (idEspace) => api.get(`/api/espaces-pedagogiques/${idEspace}/statistiques`),
 
-
-  creerTravail: (data) => api.post('/api/espaces-pedagogiques/travaux/creer', data),
-
   // Étudiant - Mes cours
   mesCours: () => api.get('/api/espaces-pedagogiques/mes-cours'),
-  mesTravaux: () => api.get('/api/espaces-pedagogiques/travaux/mes-travaux'),
+};
+
+// ==================== TRAVAUX ====================
+export const travauxAPI = {
+  creerTravail: (data) => api.post('/api/travaux/creer', data),
+  listerTravauxEspace: (idEspace) => api.get(`/api/travaux/espace/${idEspace}`),
+  obtenirDetailsTravail: (idTravail) => api.get(`/api/travaux/${idTravail}`),
+  assignerTravail: (data) => api.post('/api/travaux/assigner', data),
+  listerMesAssignations: () => api.get('/api/travaux/mes-assignations'),
+  mesTravaux: () => api.get('/api/travaux/mes-travaux'), // À implémenter si besoin
 };
 
 export default api;

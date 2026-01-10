@@ -86,21 +86,58 @@ class EmailService:
                                          formateur: str, date_echeance: str,
                                          description: str) -> bool:
         """Envoie un email d'assignation via l'API Mailtrap"""
-        if not self.api_token or not self.inbox_id: return False
+        if not self.api_token or not self.inbox_id:
+            print("❌ ERREUR: MAILTRAP_TOKEN ou MAILTRAP_INBOX_ID non configurée", flush=True)
+            return False
+
+        print(f"📧 [MAILTRAP] Notification d'assignation pour {destinataire}...", flush=True)
+        
+        corps_html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;">
+                <h2 style="color: #2563eb;">Nouveau travail assigné !</h2>
+                <p>Bonjour <strong>{prenom}</strong>,</p>
+                <p>Un nouveau travail vous a été assigné dans la matière <strong>{nom_matiere}</strong> par votre formateur <strong>{formateur}</strong>.</p>
+                
+                <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <p style="margin-top: 0;"><strong>Titre :</strong> {titre_travail}</p>
+                    <p><strong>Échéance :</strong> <span style="color: #dc2626; font-weight: bold;">{date_echeance}</span></p>
+                    <p style="margin-bottom: 0;"><strong>Description :</strong><br>{description}</p>
+                </div>
+                
+                <p>Connectez-vous à votre espace étudiant pour consulter les détails et rendre votre travail.</p>
+                <br>
+                <p>Cordialement,<br>L'équipe pédagogique UATM</p>
+            </div>
+        </body>
+        </html>
+        """
         
         payload = {
             "from": {"email": self.email_sender, "name": self.sender_name},
             "to": [{"email": destinataire}],
-            "subject": f"Nouveau travail : {titre_travail}",
-            "html": f"<h3>Bonjour {prenom}</h3><p>Nouveau travail dans {nom_matiere}. Échéance: {date_echeance}</p>"
+            "subject": f"🚩 Nouveau travail : {titre_travail}",
+            "html": corps_html
         }
-        headers = {"Authorization": f"Bearer {self.api_token}", "Content-Type": "application/json"}
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+            "Content-Type": "application/json"
+        }
         
         try:
             with httpx.Client() as client:
                 response = client.post(self.api_url, headers=headers, json=payload, timeout=10)
-            return response.status_code in [200, 201]
-        except:
+            
+            if response.status_code in [200, 201]:
+                print(f"✅ Email d'assignation capturé par Mailtrap !", flush=True)
+                return True
+            else:
+                print(f"❌ Erreur Mailtrap ({response.status_code}): {response.text}", flush=True)
+                return False
+        except Exception as e:
+            print(f"❌ Erreur critique API Mailtrap: {e}", flush=True)
             return False
 
 # Instance globale du service email
