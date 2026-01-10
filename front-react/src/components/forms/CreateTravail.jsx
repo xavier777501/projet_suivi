@@ -4,6 +4,8 @@ import { travauxAPI } from '../../services/api';
 import './CreateTravail.css';
 
 const CreateTravail = ({ spaces, initialSpaceId, onClose, onSuccess }) => {
+    const selectedSpace = spaces.find(s => s.id_espace === initialSpaceId);
+    
     const [formData, setFormData] = useState({
         id_espace: initialSpaceId || '',
         titre: '',
@@ -46,7 +48,14 @@ const CreateTravail = ({ spaces, initialSpaceId, onClose, onSuccess }) => {
                 <div className="modal-header">
                     <div className="modal-title">
                         <ClipboardList className="modal-icon" />
-                        <h2>Créer un nouveau travail</h2>
+                        <div>
+                            <h2>Créer un nouveau travail</h2>
+                            {selectedSpace && (
+                                <p className="modal-subtitle">
+                                    Pour : <strong>{selectedSpace.matiere}</strong> ({selectedSpace.promotion})
+                                </p>
+                            )}
+                        </div>
                     </div>
                     <button className="close-button" onClick={onClose}>
                         <X size={24} />
@@ -55,25 +64,27 @@ const CreateTravail = ({ spaces, initialSpaceId, onClose, onSuccess }) => {
 
                 <form onSubmit={handleSubmit} className="modal-form">
                     <div className="form-section">
-                        <div className="form-group">
-                            <label>Espace Pédagogique</label>
-                            <div className="input-with-icon">
-                                <Info className="input-icon" size={18} />
-                                <select 
-                                    name="id_espace" 
-                                    value={formData.id_espace} 
-                                    onChange={handleChange}
-                                    required
-                                >
-                                    <option value="">Sélectionner un espace</option>
-                                    {spaces.map(space => (
-                                        <option key={space.id_espace} value={space.id_espace}>
-                                            {space.matiere} - {space.promotion}
-                                        </option>
-                                    ))}
-                                </select>
+                        {!initialSpaceId && (
+                            <div className="form-group">
+                                <label>Espace Pédagogique</label>
+                                <div className="input-with-icon">
+                                    <Info className="input-icon" size={18} />
+                                    <select 
+                                        name="id_espace" 
+                                        value={formData.id_espace} 
+                                        onChange={handleChange}
+                                        required
+                                    >
+                                        <option value="">Sélectionner un espace</option>
+                                        {spaces.map(space => (
+                                            <option key={space.id_espace} value={space.id_espace}>
+                                                {space.matiere} - {space.promotion}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <div className="form-group">
                             <label>Titre du travail</label>
