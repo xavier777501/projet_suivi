@@ -1,0 +1,381 @@
+/* Styles pour le composant EvaluerTravail */
+.evaluer-travail-modal {
+    max-width: 1000px;
+    width: 95%;
+    height: 80vh;
+    max-height: 800px;
+}
+
+.evaluer-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    height: 100%;
+}
+
+.livraisons-panel,
+.evaluation-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.livraisons-panel h3,
+.evaluation-panel h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.livraisons-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.livraison-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--bg-primary);
+}
+
+.livraison-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.livraison-item.selected {
+    border-color: var(--primary-color);
+    background: var(--primary-color-light);
+    box-shadow: 0 2px 12px rgba(59, 130, 246, 0.15);
+}
+
+.livraison-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.etudiant-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.etudiant-info svg {
+    color: var(--primary-color);
+}
+
+.etudiant-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.statut-badge {
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    background: currentColor;
+    color: white !important;
+    opacity: 0.9;
+}
+
+.livraison-details {
+    margin-top: 0.5rem;
+}
+
+.livraison-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.livraison-date,
+.livraison-note {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.livraison-date svg,
+.livraison-note svg {
+    color: var(--primary-color);
+}
+
+.livraison-commentaire {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.no-livraison {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.no-livraison svg {
+    color: var(--warning-color);
+}
+
+.evaluation-panel {
+    border-left: 1px solid var(--border-color);
+    padding-left: 1.5rem;
+}
+
+.evaluation-form-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.selected-livraison-info {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.selected-livraison-info h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+    border: none;
+    padding: 0;
+}
+
+.livraison-file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--bg-primary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.livraison-file-info svg {
+    color: var(--primary-color);
+}
+
+.livraison-file-info span {
+    flex: 1;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.btn-download {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: background-color 0.3s ease;
+}
+
+.btn-download:hover {
+    background: var(--primary-color-dark);
+}
+
+.student-comment {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.student-comment h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.student-comment p {
+    margin: 0;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.evaluation-form {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color-light);
+}
+
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    min-height: 120px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color-light);
+}
+
+.evaluation-actions {
+    margin-top: auto;
+    padding-top: 1rem;
+}
+
+.empty-state,
+.no-selection,
+.no-livraison-selected {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.empty-state svg,
+.no-selection svg,
+.no-livraison-selected svg {
+    margin-bottom: 1rem;
+    color: var(--text-muted);
+}
+
+.empty-state h4,
+.no-selection h4,
+.no-livraison-selected h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border: none;
+    padding: 0;
+}
+
+.empty-state p,
+.no-selection p,
+.no-livraison-selected p {
+    margin: 0;
+    color: var(--text-muted);
+}
+
+.loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--text-secondary);
+}
+
+.spinner-large {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+.loading-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.button-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .evaluer-travail-modal {
+        width: 95%;
+        height: 90vh;
+        margin: 1rem;
+    }
+    
+    .evaluer-content {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .evaluation-panel {
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        padding-left: 0;
+        padding-top: 1rem;
+    }
+    
+    .livraisons-list {
+        max-height: 300px;
+    }
+    
+    .livraison-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
