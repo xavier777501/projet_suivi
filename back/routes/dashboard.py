@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
+from sqlalchemy import func, and_, distinct
 from datetime import datetime, date
 from typing import Dict, Any, List
 
@@ -9,7 +9,7 @@ from core.auth import get_current_user
 from models import (
     Utilisateur, RoleEnum, Filiere, Matiere, Promotion, 
     Etudiant, Formateur, EspacePedagogique, Travail, 
-    Assignation, StatutAssignationEnum, StatutEtudiantEnum
+    Assignation, StatutAssignationEnum, StatutEtudiantEnum, Inscription
 )
 
 router = APIRouter()
@@ -178,49 +178,161 @@ def get_formateur_dashboard(
         )
     
     # Mes espaces pédagogiques
-    mes_espaces = db.query(
+    mes_espaces_query = db.query(
         EspacePedagogique.id_espace,
         Matiere.nom_matiere,
         Promotion.libelle.label('promotion'),
-        func.count(Travail.id_travail).label('nombre_travaux')
+        func.count(distinct(Travail.id_travail)).label('nombre_travaux'),
+        func.count(distinct(Inscription.id_etudiant)).label('nombre_etudiants')
     ).join(
         Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
     ).join(
         Promotion, EspacePedagogique.id_promotion == Promotion.id_promotion
     ).outerjoin(
         Travail, EspacePedagogique.id_espace == Travail.id_espace
+    ).outerjoin(
+        Inscription, EspacePedagogique.id_espace == Inscription.id_espace
     ).filter(
         EspacePedagogique.id_formateur == formateur.id_formateur
     ).group_by(
         EspacePedagogique.id_espace, Matiere.nom_matiere, Promotion.libelle
     ).all()
+
+    # Statistiques générales
+    total_espaces = len(mes_espaces_query)
+    total_travaux = db.query(func.count(Travail.id_travail)).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).filter(EspacePedagogique.id_formateur == formateur.id_formateur).scalar() or 0
     
-    # Pour chaque espace, compter le nombre d'étudiants
-    espaces_data = []
-    for row in mes_espaces:
-        nombre_etudiants = db.query(Etudiant).join(
-            Promotion, Etudiant.id_promotion == Promotion.id_promotion
-        ).join(
-            EspacePedagogique, Promotion.id_promotion == EspacePedagogique.id_promotion
-        ).filter(
-            EspacePedagogique.id_espace == row.id_espace
-        ).count()
-        
-        espaces_data.append({
-            "id_espace": row.id_espace,
-            "matiere": row.nom_matiere,
-            "promotion": row.promotion,
-            "nombre_travaux": row.nombre_travaux or 0,
-            "nombre_etudiants": nombre_etudiants
-        })
-    
+    total_etudiants = db.query(func.count(distinct(Inscription.id_etudiant))).join(
+        EspacePedagogique, Inscription.id_espace == EspacePedagogique.id_espace
+    ).filter(EspacePedagogique.id_formateur == formateur.id_formateur).scalar() or 0
+
+    # Travaux à corriger (assignations au statut RENDU)
+    travaux_a_corriger = db.query(func.count(Assignation.id_assignation)).join(
+        Travail, Assignation.id_travail == Travail.id_travail
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).filter(
+        EspacePedagogique.id_formateur == formateur.id_formateur,
+        Assignation.statut == StatutAssignationEnum.RENDU
+    ).scalar() or 0
+
+    # Travaux récents
+    travaux_recents = db.query(
+        Travail.id_travail,
+        Travail.titre,
+        Travail.date_creation,
+        Matiere.nom_matiere,
+        Promotion.libelle.label('promotion')
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
+        Promotion, EspacePedagogique.id_promotion == Promotion.id_promotion
+    ).filter(
+        EspacePedagogique.id_formateur == formateur.id_formateur
+    ).order_by(Travail.date_creation.desc()).limit(5).all()
+
+    # Évaluations en attente (groupées par travail)
+    evaluations_en_attente = db.query(
+        Travail.id_travail,
+        Travail.titre,
+        func.count(Assignation.id_assignation).label('nombre_copies'),
+        Matiere.nom_matiere,
+        Promotion.libelle.label('promotion')
+    ).join(
+        Assignation, Travail.id_travail == Assignation.id_travail
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
+        Promotion, EspacePedagogique.id_promotion == Promotion.id_promotion
+    ).filter(
+        EspacePedagogique.id_formateur == formateur.id_formateur,
+        Assignation.statut == StatutAssignationEnum.RENDU
+    ).group_by(Travail.id_travail, Travail.titre, Matiere.nom_matiere, Promotion.libelle).all()
+
+    # Dernières livraisons (détails individuels)
+    dernieres_livraisons = db.query(
+        Assignation.id_assignation,
+        Travail.id_travail,
+        Travail.titre.label('titre_travail'),
+        Utilisateur.nom.label('nom_etudiant'),
+        Utilisateur.prenom.label('prenom_etudiant'),
+        Matiere.nom_matiere,
+        # On suppose qu'il y a une relation livraison
+    ).join(
+        Travail, Assignation.id_travail == Travail.id_travail
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
+        Etudiant, Assignation.id_etudiant == Etudiant.id_etudiant
+    ).join(
+        Utilisateur, Etudiant.identifiant == Utilisateur.identifiant
+    ).filter(
+        EspacePedagogique.id_formateur == formateur.id_formateur,
+        Assignation.statut == StatutAssignationEnum.RENDU
+    ).order_by(Assignation.date_assignment.desc()).limit(5).all()
+
     return {
         "formateur": {
             "nom": current_user.nom,
             "prenom": current_user.prenom,
             "matiere": formateur.matiere.nom_matiere if formateur.matiere else None
         },
-        "mes_espaces": espaces_data
+        "mes_espaces": [
+            {
+                "id_espace": row.id_espace,
+                "matiere": row.nom_matiere,
+                "promotion": row.promotion,
+                "nombre_travaux": row.nombre_travaux or 0,
+                "nombre_etudiants": row.nombre_etudiants or 0
+            }
+            for row in mes_espaces_query
+        ],
+        "statistiques_generales": {
+            "total_espaces": total_espaces,
+            "total_etudiants": total_etudiants,
+            "total_travaux": total_travaux,
+            "travaux_a_corriger": travaux_a_corriger
+        },
+        "travaux_recents": [
+            {
+                "id_travail": row.id_travail,
+                "titre": row.titre,
+                "date_creation": row.date_creation.isoformat(),
+                "matiere": row.nom_matiere,
+                "promotion": row.promotion,
+                "statut": "Actif" # Simplifié
+            }
+            for row in travaux_recents
+        ],
+        "evaluations_en_attente": [
+            {
+                "id_travail": row.id_travail,
+                "titre": row.titre,
+                "nombre_copies": row.nombre_copies,
+                "matiere": row.nom_matiere,
+                "promotion": row.promotion
+            }
+            for row in evaluations_en_attente
+        ],
+        "dernieres_livraisons": [
+            {
+                "id_assignation": row.id_assignation,
+                "id_travail": row.id_travail,
+                "titre_travail": row.titre_travail,
+                "nom_etudiant": row.nom_etudiant,
+                "prenom_etudiant": row.prenom_etudiant,
+                "matiere": row.nom_matiere
+            }
+            for row in dernieres_livraisons
+        ]
     }
 
 @router.get("/etudiant")

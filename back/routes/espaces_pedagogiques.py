@@ -13,7 +13,7 @@ from core.auth import get_current_user
 from utils.generators import generer_identifiant_unique
 import secrets
 
-router = APIRouter(prefix="/api/espaces-pedagogiques", tags=["Espaces Pédagogiques"])
+router = APIRouter()
 
 # ==================== SCHEMAS ====================
 
@@ -325,15 +325,16 @@ async def consulter_statistiques_espace(
             assignations_stats["notees"] += assignations_travail["notees"]
             
             travaux_details.append({
-                "id_travail": travail.id_travail,
-                "titre": travail.titre,
-                "description": travail.description,
-                "type_travail": travail.type_travail,
-                "date_creation": travail.date_creation.isoformat(),
-                "date_echeance": travail.date_echeance.isoformat() if travail.date_echeance else None,
-                "note_max": float(travail.note_max) if travail.note_max else None,
-                "assignations": assignations_travail
-            })
+                        "id_travail": travail.id_travail,
+                        "id_espace": travail.id_espace,
+                        "titre": travail.titre,
+                        "description": travail.description,
+                        "type_travail": travail.type_travail,
+                        "date_creation": travail.date_creation.isoformat(),
+                        "date_echeance": travail.date_echeance.isoformat() if travail.date_echeance else None,
+                        "note_max": float(travail.note_max) if travail.note_max else None,
+                        "assignations": assignations_travail
+                    })
             
     except ImportError:
         # Si les modèles Travail/Assignation n'existent pas encore

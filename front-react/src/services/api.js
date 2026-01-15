@@ -53,16 +53,6 @@ export const authAPI = {
       nouveau_mot_de_passe,
       confirmation_mot_de_passe
     }),
-
-  forgotPassword: (email) =>
-    api.post('/api/auth/forgot-password', { email }),
-
-  resetPassword: (token, nouveau_mot_de_passe, confirmation_mot_de_passe) =>
-    api.post('/api/auth/reset-password', {
-      token,
-      nouveau_mot_de_passe,
-      confirmation_mot_de_passe
-    }),
 };
 
 // ==================== DASHBOARD ====================
@@ -116,43 +106,38 @@ export const espacesPedagogiquesAPI = {
     api.get(`/api/espaces-pedagogiques/promotion/${idPromotion}/etudiants`),
 
   // Formateur - Mes espaces
-  mesEspaces: () => api.get('/api/dashboard/formateur'), // Utilise le dashboard formateur pour l'instant
+  mesEspaces: () => api.get('/api/espaces-pedagogiques/mes-espaces'),
   listerEtudiantsEspace: (idEspace) => api.get(`/api/espaces-pedagogiques/espace/${idEspace}/etudiants`),
 
   // DE - Gestion avancée espace
   consulterStatistiques: (idEspace) => api.get(`/api/espaces-pedagogiques/${idEspace}/statistiques`),
 
+
+  creerTravail: (data) => api.post('/api/espaces-pedagogiques/travaux/creer', data),
+
   // Étudiant - Mes cours
   mesCours: () => api.get('/api/espaces-pedagogiques/mes-cours'),
+  mesTravaux: () => api.get('/api/espaces-pedagogiques/travaux/mes-travaux'),
 };
 
 // ==================== TRAVAUX ====================
 export const travauxAPI = {
   creerTravail: (data) => api.post('/api/travaux/creer', data),
-  listerTravauxEspace: (idEspace) => api.get(`/api/travaux/espace/${idEspace}`),
-  obtenirDetailsTravail: (idTravail) => api.get(`/api/travaux/${idTravail}`),
-  assignerTravail: (data) => api.post('/api/travaux/assigner', data),
-  listerMesAssignations: () => api.get('/api/travaux/mes-assignations'),
   mesTravaux: () => api.get('/api/travaux/mes-travaux'),
-  
-  // Nouvelles routes pour livraison et évaluation
+  evaluerTravail: (idLivraison, data) => api.post(`/api/travaux/evaluer/${idLivraison}`, data),
+  telechargerLivraison: (idLivraison) => api.get(`/api/travaux/telecharger/${idLivraison}`, { responseType: 'blob' }),
+  assignerTravail: (data) => api.post('/api/travaux/assigner', data),
+  getTravailDetails: (idTravail) => api.get(`/api/travaux/${idTravail}`),
+  listerLivraisonsTravail: (idTravail) => api.get(`/api/travaux/travail/${idTravail}/livraisons`),
   livrerTravail: (idAssignation, fichier, commentaire) => {
     const formData = new FormData();
     formData.append('fichier', fichier);
-    if (commentaire) {
-      formData.append('commentaire', commentaire);
-    }
+    if (commentaire) formData.append('commentaire', commentaire);
+    
     return api.post(`/api/travaux/livrer/${idAssignation}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-    });
-  },
-  listerLivraisonsTravail: (idTravail) => api.get(`/api/travaux/travail/${idTravail}/livraisons`),
-  evaluerLivraison: (idLivraison, evaluation) => api.post(`/api/travaux/evaluer/${idLivraison}`, evaluation),
-  telechargerFichierLivraison: (idLivraison) => {
-    return api.get(`/api/travaux/telecharger/${idLivraison}`, {
-      responseType: 'blob',
     });
   },
 };

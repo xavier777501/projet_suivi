@@ -29,29 +29,8 @@ const EspacePage = ({ espace, onBack }) => {
     const loadEspaceData = async () => {
         try {
             setLoading(true);
-            // Pour l'instant, utilisons les données de l'espace directement
-            // Plus tard, on pourra implémenter l'API consulterStatistiques
-            const mockStatistiques = {
-                espace: espace,
-                statistiques: {
-                    nb_etudiants: espace.nombre_etudiants || 0,
-                    nb_travaux: espace.nombre_travaux || 0,
-                    assignations: {
-                        total: 0,
-                        rendues: 0,
-                        notees: 0
-                    },
-                    activite: {
-                        travaux_rendus_aujourd_hui: 0,
-                        travaux_en_retard: 0
-                    },
-                    moyenne_generale: 'N/A'
-                },
-                etudiants: espace.etudiants || [],
-                travaux: espace.travaux || []
-            };
-            
-            setStatistiques(mockStatistiques);
+            const response = await espacesPedagogiquesAPI.consulterStatistiques(espace.id_espace);
+            setStatistiques(response.data);
             setError(null);
         } catch (err) {
             console.error('Erreur chargement espace:', err);
@@ -93,6 +72,8 @@ const EspacePage = ({ espace, onBack }) => {
         );
     }
 
+    if (!statistiques) return null;
+
     const { espace: espaceData, statistiques: stats, etudiants, travaux } = statistiques;
 
     const renderGeneralTab = () => (
@@ -104,8 +85,8 @@ const EspacePage = ({ espace, onBack }) => {
                         <BookOpen size={32} />
                     </div>
                     <div className="espace-details">
-                        <h2>{espaceData.matiere}</h2>
-                        <p className="espace-promotion">{espaceData.promotion}</p>
+                        <h2>{espaceData.matiere.nom}</h2>
+                        <p className="espace-promotion">{espaceData.promotion.libelle} • {espaceData.promotion.filiere}</p>
                         <p className="espace-description">{espaceData.description || 'Aucune description disponible'}</p>
                         <div className="espace-meta">
                             <span><Calendar size={16} /> Créé le {new Date(espaceData.date_creation).toLocaleDateString('fr-FR')}</span>
@@ -132,7 +113,7 @@ const EspacePage = ({ espace, onBack }) => {
             <div className="stats-grid">
                 <div className="stat-card">
                     <CircularChart
-                        value={stats.nb_etudiants}
+                        value={stats.nb_etudiants_inscrits}
                         maxValue={50}
                         size={70}
                         strokeWidth={6}
@@ -140,7 +121,7 @@ const EspacePage = ({ espace, onBack }) => {
                         showPercentage={true}
                     />
                     <div className="stat-info">
-                        <span className="stat-number">{stats.nb_etudiants}</span>
+                        <span className="stat-number">{stats.nb_etudiants_inscrits}</span>
                         <span className="stat-label">Étudiants inscrits</span>
                     </div>
                 </div>
@@ -233,10 +214,6 @@ const EspacePage = ({ espace, onBack }) => {
         <div className="tab-content animate-fade-in">
             <div className="section-header">
                 <h3><Users size={20} /> Étudiants ({etudiants.length})</h3>
-                <button className="btn btn-secondary">
-                    <UserPlus size={16} />
-                    Ajouter des étudiants
-                </button>
             </div>
 
             {etudiants.length > 0 ? (
@@ -250,21 +227,16 @@ const EspacePage = ({ espace, onBack }) => {
                                 <div className="etudiant-info">
                                     <h4>{etudiant.prenom} {etudiant.nom}</h4>
                                     <p>{etudiant.email}</p>
+                                    <p className="etudiant-matricule">{etudiant.matricule}</p>
                                 </div>
                             </div>
-                            <div className="etudiant-stats">
-                                <div className="stat-item">
-                                    <span className="stat-value">{etudiant.travaux_rendus || 0}</span>
-                                    <span className="stat-label">Rendus</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-value">{etudiant.moyenne || 'N/A'}</span>
-                                    <span className="stat-label">Moyenne</span>
-                                </div>
-                                <div className="stat-item">
-                                    <span className="stat-value">{etudiant.presence || 'N/A'}%</span>
-                                    <span className="stat-label">Présence</span>
-                                </div>
+                            <div className="etudiant-meta-info">
+                                <span className={`statut-badge ${etudiant.statut.toLowerCase()}`}>
+                                    {etudiant.statut}
+                                </span>
+                                <span className="date-inscription">
+                                    Inscrit le {new Date(etudiant.date_inscription).toLocaleDateString('fr-FR')}
+                                </span>
                             </div>
                         </div>
                     ))}
@@ -297,53 +269,85 @@ const EspacePage = ({ espace, onBack }) => {
                     {travaux.map((travail, index) => (
                         <div key={index} className="travail-card">
                             <div className="travail-header">
-                                <h4>{travail.titre}</h4>
-                                <div className="travail-status">
-                                    {travail.statut === 'actif' && <span className="badge badge-success">Actif</span>}
-                                    {travail.statut === 'termine' && <span className="badge badge-info">Terminé</span>}
-                                    {travail.statut === 'brouillon' && <span className="badge badge-warning">Brouillon</span>}
+                                <div className="travail-title-group">
+                                    <h4>{travail.titre}</h4>
+                                    <span className={`type-badge ${travail.type_travail.toLowerCase()}`}>
+                                        {travail.type_travail}
+                                    </span>
+                                </div>
+                                <div className="travail-actions-top">
+                                    <button 
+                                        className="btn-icon" 
+                                        title="Modifier"
+                                        onClick={() => {
+                                            setSelectedTravail(travail);
+                                            setActiveModal('edit-travail');
+                                        }}
+                                    >
+                                        <Edit size={16} />
+                                    </button>
                                 </div>
                             </div>
                             <div className="travail-body">
-                                <p>{travail.description}</p>
+                                <p className="travail-description">{travail.description}</p>
                                 <div className="travail-meta">
                                     <span><Calendar size={14} /> Créé le {new Date(travail.date_creation).toLocaleDateString('fr-FR')}</span>
-                                    <span><Clock size={14} /> Limite: {new Date(travail.date_limite).toLocaleDateString('fr-FR')}</span>
+                                    {travail.date_echeance && (
+                                        <span><Clock size={14} /> Échéance: {new Date(travail.date_echeance).toLocaleDateString('fr-FR')}</span>
+                                    )}
                                 </div>
+                                
+                                <div className="travail-stats-mini">
+                                    <div className="stat-mini">
+                                        <span className="stat-value">{travail.assignations.assignees}</span>
+                                        <span className="stat-label">Assignés</span>
+                                    </div>
+                                    <div className="stat-mini">
+                                        <span className="stat-value">{travail.assignations.rendues}</span>
+                                        <span className="stat-label">Rendus</span>
+                                    </div>
+                                    <div className="stat-mini">
+                                        <span className="stat-value">{travail.assignations.notees}</span>
+                                        <span className="stat-label">Notés</span>
+                                    </div>
+                                </div>
+
                                 <div className="travail-progress">
                                     <div className="progress-info">
-                                        <span>Progression: {travail.assignations_rendues || 0}/{travail.total_assignations || 0}</span>
-                                        <span>{Math.round(((travail.assignations_rendues || 0) / (travail.total_assignations || 1)) * 100)}%</span>
+                                        <span>Progression: {travail.assignations.rendues}/{travail.assignations.assignees || 1}</span>
+                                        <span>{Math.round((travail.assignations.rendues / (travail.assignations.assignees || 1)) * 100)}%</span>
                                     </div>
                                     <div className="progress-bar">
                                         <div 
                                             className="progress-fill"
-                                            style={{ width: `${Math.round(((travail.assignations_rendues || 0) / (travail.total_assignations || 1)) * 100)}%` }}
+                                            style={{ width: `${Math.round((travail.assignations.rendues / (travail.assignations.assignees || 1)) * 100)}%` }}
                                         ></div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="travail-actions">
-                                <button className="btn btn-outline">
-                                    <Eye size={14} />
-                                    Détails
+                            <div className="travail-footer-actions">
+                                <button 
+                                    className="btn btn-assign"
+                                    onClick={() => {
+                                        setSelectedTravail(travail);
+                                        setActiveModal('assigner-travail');
+                                    }}
+                                >
+                                    <UserPlus size={16} />
+                                    Assigner
                                 </button>
-                                {travail.assignations_rendues > 0 && (
+                                {travail.assignations.rendues > 0 && (
                                     <button 
-                                        className="btn btn-primary"
+                                        className="btn btn-evaluate pulse-animation"
                                         onClick={() => {
                                             setSelectedTravail(travail);
                                             setActiveModal('evaluer-travail');
                                         }}
                                     >
-                                        <CheckCircle size={14} />
-                                        Corriger
+                                        <CheckCircle size={16} />
+                                        Noter ({travail.assignations.rendues})
                                     </button>
                                 )}
-                                <button className="btn btn-secondary">
-                                    <Edit size={14} />
-                                    Modifier
-                                </button>
                             </div>
                         </div>
                     ))}
@@ -374,8 +378,8 @@ const EspacePage = ({ espace, onBack }) => {
                     Retour aux espaces
                 </button>
                 <div className="page-title">
-                    <h1>{espaceData.matiere}</h1>
-                    <p>{espaceData.promotion}</p>
+                    <h1>{espaceData.matiere.nom}</h1>
+                    <p>{espaceData.promotion.libelle} • {espaceData.promotion.filiere}</p>
                 </div>
             </div>
 
@@ -408,6 +412,9 @@ const EspacePage = ({ espace, onBack }) => {
                 >
                     <FileText size={16} />
                     Travaux ({travaux.length})
+                    {travaux.some(t => t.assignations.rendues > 0) && (
+                        <span className="notification-dot"></span>
+                    )}
                 </button>
             </div>
 
@@ -430,6 +437,17 @@ const EspacePage = ({ espace, onBack }) => {
 
             {activeModal === 'evaluer-travail' && selectedTravail && (
                 <EvaluerTravail 
+                    travail={selectedTravail}
+                    onClose={() => {
+                        setActiveModal(null);
+                        setSelectedTravail(null);
+                    }}
+                    onSuccess={handleCreateSuccess}
+                />
+            )}
+
+            {activeModal === 'assigner-travail' && selectedTravail && (
+                <AssignerTravail 
                     travail={selectedTravail}
                     onClose={() => {
                         setActiveModal(null);

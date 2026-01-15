@@ -47,6 +47,7 @@ const FormateurDashboard = ({ onLogout }) => {
     const [activeModal, setActiveModal] = useState(null);
     const [preselectedSpaceId, setPreselectedSpaceId] = useState(null);
     const [selectedTravail, setSelectedTravail] = useState(null);
+    const [selectedAssignationId, setSelectedAssignationId] = useState(null);
     const [successMessage, setSuccessMessage] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showProfilePopup, setShowProfilePopup] = useState(false);
@@ -100,16 +101,13 @@ const FormateurDashboard = ({ onLogout }) => {
             case 'create-travail':
                 setActiveModal('create-travail');
                 break;
-            case 'view-evaluations':
-                changeActiveTab('evaluations');
-                break;
             case 'view-espaces':
-                changeActiveTab('espaces');
-                break;
-            default:
-                console.log('Action non reconnue:', actionId);
-        }
-    };
+            changeActiveTab('espaces');
+            break;
+        default:
+            console.log('Action non reconnue:', actionId);
+    }
+};
 
     const handleOpenEspacePage = (espace) => {
         console.log('Ouverture de la page d\'espace:', espace);
@@ -168,7 +166,8 @@ const FormateurDashboard = ({ onLogout }) => {
                 travaux_a_corriger: 0
             },
             travaux_recents = [],
-            evaluations_en_attente = []
+            evaluations_en_attente = [],
+            dernieres_livraisons = []
         } = stats;
 
         return (
@@ -293,24 +292,10 @@ const FormateurDashboard = ({ onLogout }) => {
                                     </button>
                                     <button 
                                         className="quick-action-btn"
-                                        onClick={() => changeActiveTab('evaluations')}
-                                    >
-                                        <CheckCircle size={24} />
-                                        <span>Évaluer travaux</span>
-                                    </button>
-                                    <button 
-                                        className="quick-action-btn"
                                         onClick={() => changeActiveTab('espaces')}
                                     >
                                         <Eye size={24} />
                                         <span>Consulter espaces</span>
-                                    </button>
-                                    <button 
-                                        className="quick-action-btn"
-                                        onClick={() => changeActiveTab('etudiants')}
-                                    >
-                                        <Users size={24} />
-                                        <span>Voir étudiants</span>
                                     </button>
                                 </div>
                             </div>
@@ -378,6 +363,47 @@ const FormateurDashboard = ({ onLogout }) => {
                                 </div>
                             </div>
                         )}
+
+                        {/* Dernières livraisons */}
+                        <div className="dashboard-card">
+                            <div className="card-header">
+                                <CheckCircle size={20} />
+                                <h2>Dernières livraisons</h2>
+                            </div>
+                            <div className="card-content">
+                                {dernieres_livraisons.length > 0 ? (
+                                    <div className="livraisons-list-compact">
+                                        {dernieres_livraisons.map((livraison, index) => (
+                                            <div key={index} className="livraison-item-compact">
+                                                <div className="livraison-info">
+                                                    <p><strong>{livraison.prenom_etudiant} {livraison.nom_etudiant}</strong></p>
+                                                    <p className="livraison-travail">{livraison.titre_travail}</p>
+                                                    <small>{livraison.matiere}</small>
+                                                </div>
+                                                <div className="livraison-actions">
+                                                    <button 
+                                                        className="btn-small btn-primary" 
+                                                        onClick={() => {
+                                                            setSelectedTravail({
+                                                                id_travail: livraison.id_travail,
+                                                                titre: livraison.titre_travail
+                                                            });
+                                                            setSelectedAssignationId(livraison.id_assignation);
+                                                            setActiveModal('evaluer-travail');
+                                                        }}
+                                                    >
+                                                        <Edit size={14} />
+                                                        <span>Noter</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="no-data">Aucune livraison récente</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -471,114 +497,6 @@ const FormateurDashboard = ({ onLogout }) => {
         </div>
     );
 
-    const renderEvaluations = () => (
-        <div className="dashboard-content animate-fade-in">
-            <div className="dashboard-header">
-                <div>
-                    <h1>Évaluations</h1>
-                    <p>Corrigez les travaux rendus par vos étudiants</p>
-                </div>
-            </div>
-            
-            <div className="evaluations-list">
-                {stats.evaluations_en_attente && stats.evaluations_en_attente.length > 0 ? (
-                    stats.evaluations_en_attente.map((evaluation, index) => (
-                        <div key={index} className="evaluation-card">
-                            <div className="evaluation-header">
-                                <h3>{evaluation.titre}</h3>
-                                <span className="badge badge-warning">{evaluation.nombre_copies} à corriger</span>
-                            </div>
-                            <div className="evaluation-body">
-                                <p>{evaluation.matiere} - {evaluation.promotion}</p>
-                                <div className="evaluation-meta">
-                                    <span><Calendar size={14} /> Limite: {new Date(evaluation.date_limite).toLocaleDateString('fr-FR')}</span>
-                                </div>
-                            </div>
-                            <div className="evaluation-actions">
-                                <button 
-                                    className="btn btn-primary"
-                                    onClick={() => {
-                                        setSelectedTravail(evaluation);
-                                        setActiveModal('evaluer-travail');
-                                    }}
-                                >
-                                    <CheckCircle size={16} /> Commencer la correction
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="empty-state">
-                        <CheckCircle size={64} opacity={0.3} />
-                        <h3>Aucune évaluation en attente</h3>
-                        <p>Tous vos travaux sont à jour !</p>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-
-    const renderEtudiants = () => {
-        const allEtudiants = stats.mes_espaces.flatMap(espace => 
-            (espace.etudiants || []).map(etudiant => ({
-                ...etudiant,
-                espace: espace.matiere,
-                promotion: espace.promotion
-            }))
-        );
-
-        return (
-            <div className="dashboard-content animate-fade-in">
-                <div className="dashboard-header">
-                    <div>
-                        <h1>Mes Étudiants</h1>
-                        <p>Vue d'ensemble de tous vos étudiants</p>
-                    </div>
-                </div>
-                
-                {allEtudiants.length > 0 ? (
-                    <div className="etudiants-grid">
-                        {allEtudiants.map((etudiant, index) => (
-                            <div key={index} className="etudiant-card">
-                                <div className="etudiant-header">
-                                    <div className="etudiant-avatar">
-                                        <User size={24} />
-                                    </div>
-                                    <div className="etudiant-info">
-                                        <h3>{etudiant.prenom} {etudiant.nom}</h3>
-                                        <p>{etudiant.email}</p>
-                                    </div>
-                                </div>
-                                <div className="etudiant-body">
-                                    <div className="etudiant-meta">
-                                        <span><BookOpen size={14} /> {etudiant.espace}</span>
-                                        <span><Users size={14} /> {etudiant.promotion}</span>
-                                    </div>
-                                    <div className="etudiant-stats">
-                                        <div className="stat-item">
-                                            <span className="stat-value">{etudiant.travaux_rendus || 0}</span>
-                                            <span className="stat-label">Travaux rendus</span>
-                                        </div>
-                                        <div className="stat-item">
-                                            <span className="stat-value">{etudiant.moyenne || '-'}</span>
-                                            <span className="stat-label">Moyenne</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="empty-state">
-                        <Users size={64} opacity={0.3} />
-                        <h3>Aucun étudiant</h3>
-                        <p>Vous n'avez pas encore d'étudiants assignés à vos espaces.</p>
-                    </div>
-                )}
-            </div>
-        );
-    };
-
     return (
         <div className="formateur-dashboard-container">
             {/* Sidebar */}
@@ -614,20 +532,6 @@ const FormateurDashboard = ({ onLogout }) => {
                     >
                         <FileText size={20} />
                         <span>Mes Travaux</span>
-                    </button>
-                    <button 
-                        className={`formateur-nav-item ${activeTab === 'evaluations' ? 'active' : ''}`}
-                        onClick={() => changeActiveTab('evaluations')}
-                    >
-                        <CheckCircle size={20} />
-                        <span>Évaluations</span>
-                    </button>
-                    <button 
-                        className={`formateur-nav-item ${activeTab === 'etudiants' ? 'active' : ''}`}
-                        onClick={() => changeActiveTab('etudiants')}
-                    >
-                        <Users size={20} />
-                        <span>Mes Étudiants</span>
                     </button>
                 </nav>
 
@@ -722,15 +626,11 @@ const FormateurDashboard = ({ onLogout }) => {
                                 {activeTab === 'dashboard' && "Tableau de bord"}
                                 {activeTab === 'espaces' && "Mes Espaces Pédagogiques"}
                                 {activeTab === 'travaux' && "Mes Travaux"}
-                                {activeTab === 'evaluations' && "Évaluations"}
-                                {activeTab === 'etudiants' && "Mes Étudiants"}
                             </h1>
                             <p className="formateur-subtitle">
                                 {activeTab === 'dashboard' && "Vue d'ensemble de vos activités pédagogiques"}
                                 {activeTab === 'espaces' && "Gérez vos espaces et créez des travaux pour vos étudiants"}
                                 {activeTab === 'travaux' && "Consultez et gérez tous vos travaux créés"}
-                                {activeTab === 'evaluations' && "Corrigez les travaux rendus par vos étudiants"}
-                                {activeTab === 'etudiants' && "Vue d'ensemble de tous vos étudiants"}
                             </p>
                         </div>
                     </div>
@@ -738,8 +638,6 @@ const FormateurDashboard = ({ onLogout }) => {
                     {activeTab === 'dashboard' && renderDashboard()}
                     {activeTab === 'espaces' && renderEspaces()}
                     {activeTab === 'travaux' && renderTravaux()}
-                    {activeTab === 'evaluations' && renderEvaluations()}
-                    {activeTab === 'etudiants' && renderEtudiants()}
                 </div>
             </main>
 
@@ -765,9 +663,11 @@ const FormateurDashboard = ({ onLogout }) => {
             {activeModal === 'evaluer-travail' && selectedTravail && (
                 <EvaluerTravail 
                     travail={selectedTravail}
+                    initialAssignationId={selectedAssignationId}
                     onClose={() => {
                         setActiveModal(null);
                         setSelectedTravail(null);
+                        setSelectedAssignationId(null);
                     }}
                     onSuccess={handleCreateSuccess}
                 />

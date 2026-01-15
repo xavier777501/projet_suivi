@@ -17,7 +17,7 @@ from utils.generators import (
 )
 from utils.email_service import email_service
 
-router = APIRouter(prefix="/api/gestion-comptes", tags=["Gestion des comptes"])
+router = APIRouter()
 
 # Schémas Pydantic pour la validation
 from pydantic import BaseModel, EmailStr

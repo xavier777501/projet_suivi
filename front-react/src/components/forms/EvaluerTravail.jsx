@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    FileText, Download, User, Calendar, Clock, 
-    Star, MessageSquare, X, Save, Eye 
+import {
+    FileText, Download, User, Calendar, Clock,
+    Star, MessageSquare, X, Save, Eye
 } from 'lucide-react';
 import { travauxAPI } from '../../services/api';
 import './EvaluerTravail.css';
 
-const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
+const EvaluerTravail = ({ travail, onClose, onSuccess, initialAssignationId }) => {
     const [livraisons, setLivraisons] = useState([]);
     const [selectedLivraison, setSelectedLivraison] = useState(null);
     const [note, setNote] = useState('');
@@ -23,7 +23,16 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
         try {
             setLoading(true);
             const response = await travauxAPI.listerLivraisonsTravail(travail.id_travail);
-            setLivraisons(response.data.assignations);
+            const allLivraisons = response.data.assignations;
+            setLivraisons(allLivraisons);
+
+            // Si on a une assignation initiale, on la sélectionne
+            if (initialAssignationId) {
+                const initial = allLivraisons.find(a => a.id_assignation === initialAssignationId);
+                if (initial) {
+                    handleSelectLivraison(initial);
+                }
+            }
         } catch (err) {
             console.error('Erreur chargement livraisons:', err);
             setError('Erreur lors du chargement des livraisons');
@@ -46,7 +55,7 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
 
     const handleEvaluer = async (e) => {
         e.preventDefault();
-        
+
         if (!selectedLivraison?.livraison) {
             setError('Aucune livraison sélectionnée');
             return;
@@ -61,11 +70,11 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
         setError('');
 
         try {
-            await travauxAPI.evaluerLivraison(selectedLivraison.livraison.id_livraison, {
+            await travauxAPI.evaluerTravail(selectedLivraison.livraison.id_livraison, {
                 note_attribuee: parseFloat(note),
                 feedback: feedback
             });
-            
+
             onSuccess('Évaluation enregistrée avec succès !');
             await loadLivraisons(); // Recharger pour voir les changements
             setSelectedLivraison(null);
@@ -81,31 +90,77 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
 
     const handleDownloadFile = async (idLivraison) => {
         try {
-            const response = await travauxAPI.telechargerFichierLivraison(idLivraison);
-            
-            // Créer un lien de téléchargement
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            
-            // Essayer de récupérer le nom du fichier depuis les headers
-            const contentDisposition = response.headers['content-disposition'];
+            const response = await travauxAPI.telechargerLivraison(idLivraison);
+
+            // Axios renvoie le blob directement dans response.data quand responseType: 'blob'
+            const blob = response.data;
+
+            // Récupérer le nom de fichier
+            // 1. D'abord via le header personnalisé X-Filename (pour contourner IDM)
+            // 2. Ensuite via Content-Disposition
+            // 3. Fallback générique
             let filename = 'fichier_livraison';
-            if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                if (filenameMatch) {
-                    filename = filenameMatch[1];
+
+            const xFilename = response.headers['x-filename'];
+            if (xFilename) {
+                filename = decodeURIComponent(xFilename);
+            } else {
+                const contentDisposition = response.headers['content-disposition'];
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1];
+                    }
                 }
             }
-            
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
+
+            // MÉTHODE 1 : File System Access API (Anti-IDM)
+            // Cette méthode est la meilleure car elle ne déclenche pas de navigation ou de lien
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return;
+                    // Si autre erreur, on continue vers la méthode fallback
+                    console.warn('Erreur File System Access API, fallback...', err);
+                }
+            }
+
+            // MÉTHODE 2 : Fallback via Blob URL
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename; // C'est souvent ce qui déclenche IDM
+
+            // Astuces Anti-IDM
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+
+            // Ne PAS rajouter au body si possible (Chrome/Edge le supportent hors DOM)
+            // Cela réduit la visibilité pour certains extensions
+            // document.body.appendChild(link); // Commenté intentionnellement
+
+            // Utiliser dispatchEvent au lieu de click() peut parfois contourner les hooks
+            const clickEvent = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            link.dispatchEvent(clickEvent);
+
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            }, 2000);
+
         } catch (err) {
             console.error('Erreur téléchargement:', err);
-            setError('Erreur lors du téléchargement du fichier');
+            setError(err.response?.data?.detail || 'Erreur lors du téléchargement. Si vous utilisez IDM, essayez de le désactiver pour ce site.');
         }
     };
 
@@ -168,7 +223,7 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
                         {/* Liste des livraisons */}
                         <div className="livraisons-panel">
                             <h3>Livraisons ({livraisons.length})</h3>
-                            
+
                             {livraisons.length === 0 ? (
                                 <div className="empty-state">
                                     <FileText size={48} opacity={0.3} />
@@ -177,7 +232,7 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
                             ) : (
                                 <div className="livraisons-list">
                                     {livraisons.map((assignation) => (
-                                        <div 
+                                        <div
                                             key={assignation.id_assignation}
                                             className={`livraison-item ${selectedLivraison?.id_assignation === assignation.id_assignation ? 'selected' : ''}`}
                                             onClick={() => handleSelectLivraison(assignation)}
@@ -189,14 +244,14 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
                                                         {assignation.prenom_etudiant} {assignation.nom_etudiant}
                                                     </span>
                                                 </div>
-                                                <span 
+                                                <span
                                                     className="statut-badge"
                                                     style={{ color: getStatutColor(assignation.statut) }}
                                                 >
                                                     {getStatutLabel(assignation.statut)}
                                                 </span>
                                             </div>
-                                            
+
                                             {assignation.livraison ? (
                                                 <div className="livraison-details">
                                                     <div className="livraison-meta">
@@ -211,7 +266,7 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    
+
                                                     {assignation.livraison.commentaire && (
                                                         <p className="livraison-commentaire">
                                                             "{assignation.livraison.commentaire}"
@@ -239,19 +294,35 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
                                             <h4>
                                                 Évaluation de {selectedLivraison.prenom_etudiant} {selectedLivraison.nom_etudiant}
                                             </h4>
-                                            
+
                                             <div className="livraison-file-info">
                                                 <FileText size={16} />
                                                 <span>Fichier livré</span>
-                                                <button 
-                                                    className="btn-download"
-                                                    onClick={() => handleDownloadFile(selectedLivraison.livraison.id_livraison)}
+                                                <div
+                                                    className="btn btn-secondary btn-sm"
+                                                    style={{
+                                                        cursor: 'pointer',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        marginLeft: '12px',
+                                                        padding: '6px 12px',
+                                                        borderRadius: '6px',
+                                                        backgroundColor: '#6b7280',
+                                                        color: 'white',
+                                                        fontSize: '0.85rem'
+                                                    }}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleDownloadFile(selectedLivraison.livraison.id_livraison);
+                                                    }}
                                                 >
                                                     <Download size={14} />
-                                                    Télécharger
-                                                </button>
+                                                    Récupérer le fichier
+                                                </div>
                                             </div>
-                                            
+
                                             {selectedLivraison.livraison.commentaire && (
                                                 <div className="student-comment">
                                                     <h5>Commentaire de l'étudiant:</h5>
@@ -296,9 +367,9 @@ const EvaluerTravail = ({ travail, onClose, onSuccess }) => {
                                             </div>
 
                                             <div className="evaluation-actions">
-                                                <button 
-                                                    type="submit" 
-                                                    className="btn btn-primary" 
+                                                <button
+                                                    type="submit"
+                                                    className="btn btn-primary"
                                                     disabled={evaluating}
                                                 >
                                                     {evaluating ? (

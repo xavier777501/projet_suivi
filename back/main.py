@@ -94,33 +94,42 @@ origins = [
     "http://127.0.0.1:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5174",
+    "http://localhost:3000",
+    "https://projet-suivi-1.onrender.com", # Ajoutez votre domaine de production si nécessaire
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Autorise toutes les origines pour le déploiement
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition", "Content-Length", "X-Filename"]
 )
 
 # Inclure les routers
+print("Chargement des routers...")
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+print("Router auth chargé")
 
 from routes import gestion_comptes
-app.include_router(gestion_comptes.router)
+app.include_router(gestion_comptes.router, prefix="/api/gestion-comptes", tags=["Gestion des comptes"])
+print("Router gestion_comptes chargé")
 
 # Inclure les routes de dashboard
 from routes import dashboard
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
+print("Router dashboard chargé")
 
 # Inclure les routes d'espaces pédagogiques
 from routes import espaces_pedagogiques
-app.include_router(espaces_pedagogiques.router)
+app.include_router(espaces_pedagogiques.router, prefix="/api/espaces-pedagogiques", tags=["Espaces Pédagogiques"])
+print("Router espaces_pedagogiques chargé")
 
 # Inclure les routes de travaux
 from routes import travaux
-app.include_router(travaux.router)
+app.include_router(travaux.router, prefix="/api/travaux", tags=["Travaux"])
+print("Router travaux chargé")
 
 @app.get("/")
 def home():

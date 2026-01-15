@@ -12,6 +12,7 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
     const [error, setError] = useState('');
 
     useEffect(() => {
+        console.log('AssignerTravail - travail reçu:', travail);
         loadEtudiants();
         // Initialiser avec la date d'échéance du travail
         if (travail.date_echeance) {

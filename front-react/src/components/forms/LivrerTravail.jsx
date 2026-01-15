@@ -164,10 +164,11 @@ const LivrerTravail = ({ assignation, onClose, onSuccess }) => {
                                                 type="file"
                                                 onChange={(e) => handleFileChange(e.target.files[0])}
                                                 style={{ display: 'none' }}
+                                                accept=".pdf,.zip,.rar,.doc,.docx,.jpg,.png"
                                             />
                                         </label>
                                         <p className="file-constraints">
-                                            Taille maximale: 10MB
+                                            PDF, ZIP, DOCX, Images... (Max: 10MB)
                                         </p>
                                     </div>
                                 )}

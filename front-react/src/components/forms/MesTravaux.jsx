@@ -40,38 +40,58 @@ const MesTravaux = ({ onBack }) => {
 
     const handleDownloadFile = async (idLivraison) => {
         try {
-            const response = await travauxAPI.telechargerFichierLivraison(idLivraison);
-            
-            // Créer un lien de téléchargement
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            const link = document.createElement('a');
-            link.href = url;
-            
-            // Essayer de récupérer le nom du fichier depuis les headers
+            const response = await travauxAPI.telechargerLivraison(idLivraison);
+
+            // Axios renvoie le blob directement dans response.data quand responseType: 'blob'
+            const blob = response.data;
             const contentDisposition = response.headers['content-disposition'];
             let filename = 'fichier_livraison';
+
             if (contentDisposition) {
                 const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                if (filenameMatch) {
-                    filename = filenameMatch[1];
+                if (filenameMatch) filename = filenameMatch[1];
+            }
+
+            // MÉTHODE 1 : File System Access API (Anti-IDM)
+            if ('showSaveFilePicker' in window) {
+                try {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return;
+                } catch (err) {
+                    if (err.name === 'AbortError') return;
                 }
             }
-            
+
+            // MÉTHODE 2 : Fallback via Blob URL (plus robuste qu'une Data URL)
+            const url = window.URL.createObjectURL(new Blob([blob]));
+            const link = document.createElement('a');
+            link.href = url;
             link.setAttribute('download', filename);
+            link.setAttribute('idm', 'false');
+            link.setAttribute('rel', 'noopener noreferrer');
+            link.style.display = 'none';
             document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
+
+            setTimeout(() => {
+                link.click();
+                setTimeout(() => {
+                    if (link.parentNode) document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                }, 1000);
+            }, 50);
         } catch (err) {
             console.error('Erreur téléchargement:', err);
-            setError('Erreur lors du téléchargement du fichier');
+            setError(err.response?.data?.detail || 'Erreur lors du téléchargement du fichier');
         }
     };
 
     const getStatutBadge = (assignation) => {
-        if (assignation.livraison?.note_attribuee !== null && assignation.livraison?.note_attribuee !== undefined) {
-            return <span className="badge badge-success"><CheckCircle size={14} /> Noté</span>;
-        } else if (assignation.livraison?.date_livraison) {
+        if (assignation.livraison?.date_livraison) {
             return <span className="badge badge-warning"><Clock size={14} /> Rendu</span>;
         } else if (new Date(assignation.date_echeance) < new Date()) {
             return <span className="badge badge-danger"><AlertCircle size={14} /> En retard</span>;
@@ -81,7 +101,6 @@ const MesTravaux = ({ onBack }) => {
     };
 
     const getStatutColor = (assignation) => {
-        if (assignation.livraison?.note_attribuee !== null && assignation.livraison?.note_attribuee !== undefined) return 'success';
         if (assignation.livraison?.date_livraison) return 'warning';
         if (new Date(assignation.date_echeance) < new Date()) return 'danger';
         return 'info';
@@ -154,7 +173,7 @@ const MesTravaux = ({ onBack }) => {
                     <FileText size={24} />
                     <div>
                         <h1>Mes Travaux</h1>
-                        <p>Consultez et gérez vos travaux assignés</p>
+                        <p>Consultez vos travaux et gérez vos rendus</p>
                     </div>
                 </div>
             </div>
@@ -179,12 +198,7 @@ const MesTravaux = ({ onBack }) => {
                 >
                     Rendus ({getFilterCount('rendus')})
                 </button>
-                <button
-                    className={`filter-btn ${activeFilter === 'notes' ? 'active' : ''}`}
-                    onClick={() => setActiveFilter('notes')}
-                >
-                    Notés ({getFilterCount('notes')})
-                </button>
+
             </div>
 
             {/* Liste des travaux */}
@@ -240,20 +254,7 @@ const MesTravaux = ({ onBack }) => {
                                     )}
                                 </div>
 
-                                {assignation.livraison?.note_attribuee !== null && assignation.livraison?.note_attribuee !== undefined && (
-                                    <div className="travail-note">
-                                        <div className="note-display">
-                                            <span className="note-value">{assignation.livraison.note_attribuee}/{assignation.note_max}</span>
-                                            <span className="note-label">Note obtenue</span>
-                                        </div>
-                                        {assignation.livraison.feedback && (
-                                            <div className="feedback">
-                                                <strong>Commentaire du formateur:</strong>
-                                                <p>{assignation.livraison.feedback}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+
 
                                 {assignation.livraison?.commentaire && (
                                     <div className="commentaire-etudiant">
@@ -275,7 +276,7 @@ const MesTravaux = ({ onBack }) => {
                                 )}
 
                                 {assignation.livraison?.date_livraison && assignation.livraison?.chemin_fichier && (
-                                    <button 
+                                    <button
                                         className="btn btn-secondary"
                                         onClick={() => handleDownloadFile(assignation.livraison.id_livraison)}
                                     >

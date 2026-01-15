@@ -574,6 +574,180 @@
     color: var(--primary-color);
 }
 
+/* Boutons spécifiques */
+.btn-assign {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-assign:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.btn-evaluate {
+    background: #059669;
+    color: white;
+}
+
+.btn-evaluate:hover {
+    background: #047857;
+}
+
+.pulse-animation {
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(5, 150, 105, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(5, 150, 105, 0);
+    }
+}
+
+.notification-dot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 10px;
+    height: 10px;
+    background-color: #ef4444;
+    border-radius: 50%;
+    border: 2px solid var(--background-color);
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    background: var(--primary-light);
+    color: var(--primary-color);
+}
+
+/* Éléments supplémentaires des cartes travaux */
+.travail-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.type-badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.type-badge.individuel {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.type-badge.collectif {
+    background: #fdf2f8;
+    color: #9d174d;
+}
+
+.travail-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.travail-stats-mini {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--hover-color);
+    border-radius: 8px;
+}
+
+.stat-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-mini .stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 0;
+}
+
+.stat-mini .stat-label {
+    font-size: 0.7rem;
+}
+
+.travail-footer-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.travail-footer-actions .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* Métadonnées étudiants */
+.etudiant-matricule {
+    font-size: 0.8rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+.etudiant-meta-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.statut-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.statut-badge.actif {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.date-inscription {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
 /* États */
 .loading-state,
 .error-state,

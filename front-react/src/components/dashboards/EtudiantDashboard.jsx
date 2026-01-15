@@ -7,7 +7,7 @@ import './EtudiantDashboard.css';
 
 const EtudiantDashboard = ({ onLogout }) => {
     const { theme, toggleTheme } = useTheme();
-    
+
     // Restaurer l'onglet actif depuis sessionStorage ou utiliser 'dashboard' par défaut
     const [activeTab, setActiveTab] = useState(() => {
         return sessionStorage.getItem('etudiant_activeTab') || 'dashboard';
@@ -47,11 +47,7 @@ const EtudiantDashboard = ({ onLogout }) => {
         switch (actionId) {
             case 'view-travaux':
                 console.log('Voir mes travaux');
-                setShowMesTravaux(true);
-                break;
-            case 'view-notes':
-                console.log('Voir mes notes');
-                changeActiveTab('notes');
+                changeActiveTab('travaux');
                 break;
             case 'view-planning':
                 console.log('Voir le planning');
@@ -63,15 +59,18 @@ const EtudiantDashboard = ({ onLogout }) => {
     };
 
     const handleOpenMesTravaux = () => {
-        setShowMesTravaux(true);
+        changeActiveTab('travaux');
     };
 
     const handleCloseMesTravaux = () => {
         setShowMesTravaux(false);
+        if (activeTab === 'travaux') {
+            changeActiveTab('dashboard');
+        }
     };
 
     // Si on affiche MesTravaux, on retourne uniquement ce composant
-    if (showMesTravaux) {
+    if (showMesTravaux || activeTab === 'travaux') {
         return <MesTravaux onBack={handleCloseMesTravaux} />;
     }
 
@@ -81,7 +80,7 @@ const EtudiantDashboard = ({ onLogout }) => {
                 <h2>Bienvenue dans votre espace étudiant</h2>
                 <p>Consultez vos travaux, notes et planning depuis cette interface.</p>
             </div>
-            
+
             <div className="etudiant-stats-grid">
                 <div className="etudiant-stat-card clickable" onClick={handleOpenMesTravaux}>
                     <div className="etudiant-stat-icon blue">
@@ -93,15 +92,7 @@ const EtudiantDashboard = ({ onLogout }) => {
                     </div>
                 </div>
 
-                <div className="etudiant-stat-card">
-                    <div className="etudiant-stat-icon green">
-                        <BarChart3 size={24} />
-                    </div>
-                    <div className="etudiant-stat-details">
-                        <span className="etudiant-stat-label">Moyenne générale</span>
-                        <span className="etudiant-stat-value">-/20</span>
-                    </div>
-                </div>
+
 
                 <div className="etudiant-stat-card">
                     <div className="etudiant-stat-icon orange">
@@ -121,23 +112,12 @@ const EtudiantDashboard = ({ onLogout }) => {
                         <FileText size={32} />
                         <span>Consulter mes travaux</span>
                     </button>
-                    <button className="action-card" onClick={() => changeActiveTab('notes')}>
-                        <BarChart3 size={32} />
-                        <span>Voir mes notes</span>
-                    </button>
                     <button className="action-card" onClick={() => changeActiveTab('planning')}>
                         <BookOpen size={32} />
                         <span>Mon planning</span>
                     </button>
                 </div>
             </div>
-        </div>
-    );
-
-    const renderNotes = () => (
-        <div className="etudiant-content">
-            <h2>Mes Notes</h2>
-            <p>Fonctionnalité à implémenter - Consultation des notes</p>
         </div>
     );
 
@@ -160,28 +140,21 @@ const EtudiantDashboard = ({ onLogout }) => {
                 </div>
 
                 <nav className="etudiant-sidebar-nav">
-                    <button 
+                    <button
                         className={`etudiant-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
                         onClick={() => changeActiveTab('dashboard')}
                     >
                         <Layout size={20} />
                         <span>Tableau de bord</span>
                     </button>
-                    <button 
-                        className="etudiant-nav-item"
-                        onClick={handleOpenMesTravaux}
+                    <button
+                        className={`etudiant-nav-item ${activeTab === 'travaux' ? 'active' : ''}`}
+                        onClick={() => changeActiveTab('travaux')}
                     >
                         <FileText size={20} />
                         <span>Mes Travaux</span>
                     </button>
-                    <button 
-                        className={`etudiant-nav-item ${activeTab === 'notes' ? 'active' : ''}`}
-                        onClick={() => changeActiveTab('notes')}
-                    >
-                        <BarChart3 size={20} />
-                        <span>Mes Notes</span>
-                    </button>
-                    <button 
+                    <button
                         className={`etudiant-nav-item ${activeTab === 'planning' ? 'active' : ''}`}
                         onClick={() => changeActiveTab('planning')}
                     >
@@ -204,7 +177,7 @@ const EtudiantDashboard = ({ onLogout }) => {
                     <div className="etudiant-header-title">
                         <h1>
                             {activeTab === 'dashboard' && 'Tableau de bord'}
-                            {activeTab === 'notes' && 'Mes Notes'}
+                            {activeTab === 'travaux' && 'Mes Travaux'}
                             {activeTab === 'planning' && 'Mon Planning'}
                         </h1>
                     </div>
@@ -213,7 +186,7 @@ const EtudiantDashboard = ({ onLogout }) => {
                         <button className="etudiant-icon-button">
                             <Bell size={20} />
                         </button>
-                        
+
                         {/* Profil avec popup */}
                         <div className="profile-container" ref={profileRef}>
                             <button
@@ -263,13 +236,12 @@ const EtudiantDashboard = ({ onLogout }) => {
 
                 <div className="etudiant-dashboard-content">
                     {activeTab === 'dashboard' && renderDashboard()}
-                    {activeTab === 'notes' && renderNotes()}
                     {activeTab === 'planning' && renderPlanning()}
                 </div>
             </main>
 
             {/* Bouton d'accès rapide flottant */}
-            <QuickAccessFab 
+            <QuickAccessFab
                 onAction={handleQuickAction}
                 userRole="ETUDIANT"
             />
