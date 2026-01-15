@@ -38,6 +38,22 @@ class ChangePasswordRequest(BaseModel):
         return v
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    nouveau_mot_de_passe: str
+    confirmation_mot_de_passe: str
+
+    @validator('confirmation_mot_de_passe')
+    def passwords_match(cls, v, values):
+        if 'nouveau_mot_de_passe' in values and v != values['nouveau_mot_de_passe']:
+            raise ValueError('Les mots de passe ne correspondent pas')
+        return v
+
+
 class ActivateAccountRequest(BaseModel):
     token: str
     mot_de_passe: str
@@ -345,3 +361,75 @@ def test_connexion(email: str, mot_de_passe: str, db: Session = Depends(get_db))
             "statut": "ECHEC",
             "message": "Mot de passe incorrect"
         }
+
+
+@router.post("/forgot-password")
+def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Route pour demander la réinitialisation du mot de passe
+    """
+    # Étape 1: Rechercher l'utilisateur par email
+    utilisateur = db.query(Utilisateur).filter(
+        Utilisateur.email == request.email,
+        Utilisateur.actif == True
+    ).first()
+    
+    if not utilisateur:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Aucun compte n'est associé à cette adresse email."
+        )
+    
+    # Étape 2: Générer un token de réinitialisation
+    token = generer_token_unique(32)
+    date_expiration = datetime.utcnow() + timedelta(hours=1)  # Token valide 1 heure
+    
+    # Étape 3: Mettre à jour l'utilisateur avec le token
+    utilisateur.token_activation = token
+    utilisateur.date_expiration_token = date_expiration
+    db.commit()
+    
+    # Étape 4: Dans un vrai système, on enverrait un email ici
+    # Pour le moment, on retourne juste un message de succès
+    print(f"🔗 RESET TOKEN pour {request.email}: {token}")
+    print(f"🔗 LIEN DE RESET: http://localhost:5173/reset-password?token={token}")
+    
+    return {
+        "message": "Un email de réinitialisation a été envoyé à votre adresse email.",
+        "debug_token": token  # À supprimer en production
+    }
+
+
+@router.post("/reset-password")
+def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    """
+    Route pour réinitialiser le mot de passe avec un token
+    """
+    # Étape 1: Vérifier le token de réinitialisation
+    utilisateur = db.query(Utilisateur).filter(
+        Utilisateur.token_activation == request.token,
+        Utilisateur.date_expiration_token > datetime.utcnow(),
+        Utilisateur.actif == True
+    ).first()
+    
+    if not utilisateur:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token invalide ou expiré"
+        )
+    
+    # Étape 2: Vérifier que les mots de passe correspondent (déjà fait par Pydantic)
+    
+    # Étape 3: Hacher le nouveau mot de passe
+    mot_de_passe_hache = get_password_hash(request.nouveau_mot_de_passe)
+    
+    # Étape 4: Mettre à jour l'utilisateur
+    utilisateur.mot_de_passe = mot_de_passe_hache
+    utilisateur.mot_de_passe_temporaire = False
+    utilisateur.token_activation = None
+    utilisateur.date_expiration_token = None
+    db.commit()
+    
+    return {
+        "message": "Mot de passe réinitialisé avec succès"
+    }
