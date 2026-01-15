@@ -1,13 +1,13 @@
 // Utilitaires pour la gestion de l'authentification
 
 export const saveAuthData = (token, userData) => {
-  localStorage.setItem('authToken', token);
-  localStorage.setItem('userData', JSON.stringify(userData));
+  sessionStorage.setItem('authToken', token);
+  sessionStorage.setItem('userData', JSON.stringify(userData));
 };
 
 export const getAuthData = () => {
-  const token = localStorage.getItem('authToken');
-  const userData = localStorage.getItem('userData');
+  const token = sessionStorage.getItem('authToken');
+  const userData = sessionStorage.getItem('userData');
   
   if (token && userData) {
     return {
@@ -20,12 +20,16 @@ export const getAuthData = () => {
 };
 
 export const clearAuthData = () => {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('userData');
+  sessionStorage.removeItem('authToken');
+  sessionStorage.removeItem('userData');
+  // Nettoyer aussi l'état de navigation des dashboards
+  sessionStorage.removeItem('de_activeTab');
+  sessionStorage.removeItem('formateur_activeTab');
+  sessionStorage.removeItem('etudiant_activeTab');
 };
 
 export const isAuthenticated = () => {
-  return !!localStorage.getItem('authToken');
+  return !!sessionStorage.getItem('authToken');
 };
 
 export const getUserRole = () => {

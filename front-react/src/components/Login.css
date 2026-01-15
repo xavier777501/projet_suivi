@@ -34,7 +34,7 @@
 }
 
 .login-logo {
-  max-height: 100px;
+  max-height: 80px;
   width: auto;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
 }
@@ -200,6 +200,26 @@
   cursor: not-allowed;
 }
 
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-spinner svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .error-message {
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid var(--error-color);
@@ -242,6 +262,62 @@
   }
 }
 
+/* Bouton profil fixe pour les dashboards */
+.profile-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.profile-button:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Bouton thème flottant pour les dashboards */
+.theme-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 1.2rem;
+}
+
+.theme-button:hover {
+  background-color: var(--accent-color);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
 @media (max-width: 480px) {
   .login-card {
     padding: 2rem 1.5rem;
@@ -251,5 +327,21 @@
     flex-direction: column;
     gap: 0.75rem;
     align-items: flex-start;
+  }
+
+  .profile-button,
+  .theme-button {
+    width: 45px;
+    height: 45px;
+    top: 15px;
+    font-size: 1.1rem;
+  }
+
+  .profile-button {
+    right: 15px;
+  }
+
+  .theme-button {
+    left: 15px;
   }
 }

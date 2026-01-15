@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { authAPI } from '../services/api'
+import ForgotPassword from './ForgotPassword'
 import './Login.css'
 
 function Login({ onLoginSuccess }) {
+  const [currentView, setCurrentView] = useState('login') // 'login' ou 'forgot-password'
   const [formData, setFormData] = useState({
     email: '',
     mot_de_passe: ''
@@ -89,6 +91,19 @@ function Login({ onLoginSuccess }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleForgotPassword = (e) => {
+    e.preventDefault()
+    setCurrentView('forgot-password')
+  }
+
+  const handleBackToLogin = () => {
+    setCurrentView('login')
+  }
+
+  if (currentView === 'forgot-password') {
+    return <ForgotPassword onBack={handleBackToLogin} />
   }
 
   return (
@@ -186,7 +201,7 @@ function Login({ onLoginSuccess }) {
               <span className="checkmark"></span>
               Se souvenir de moi
             </label>
-            <a href="#" className="forgot-password">Mot de passe oublié?</a>
+            <a href="#" className="forgot-password" onClick={handleForgotPassword}>Mot de passe oublié?</a>
           </div>
 
           <button type="submit" disabled={loading} className="login-button">

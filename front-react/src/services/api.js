@@ -14,7 +14,7 @@ const api = axios.create({
 // Intercepteur pour ajouter le token JWT automatiquement
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    const token = sessionStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -33,8 +33,8 @@ api.interceptors.response.use(
       // Ne pas rediriger si c'est une tentative de connexion (erreur normale)
       if (!error.config.url.includes('/auth/login')) {
         // Token expiré ou invalide pour les autres requêtes
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+        sessionStorage.removeItem('authToken');
+        sessionStorage.removeItem('userData');
         window.location.href = '/';
       }
     }
@@ -49,6 +49,16 @@ export const authAPI = {
 
   changePassword: (token, nouveau_mot_de_passe, confirmation_mot_de_passe) =>
     api.post('/api/auth/changer-mot-de-passe', {
+      token,
+      nouveau_mot_de_passe,
+      confirmation_mot_de_passe
+    }),
+
+  forgotPassword: (email) =>
+    api.post('/api/auth/forgot-password', { email }),
+
+  resetPassword: (token, nouveau_mot_de_passe, confirmation_mot_de_passe) =>
+    api.post('/api/auth/reset-password', {
       token,
       nouveau_mot_de_passe,
       confirmation_mot_de_passe
@@ -123,7 +133,28 @@ export const travauxAPI = {
   obtenirDetailsTravail: (idTravail) => api.get(`/api/travaux/${idTravail}`),
   assignerTravail: (data) => api.post('/api/travaux/assigner', data),
   listerMesAssignations: () => api.get('/api/travaux/mes-assignations'),
-  mesTravaux: () => api.get('/api/travaux/mes-travaux'), // À implémenter si besoin
+  mesTravaux: () => api.get('/api/travaux/mes-travaux'),
+  
+  // Nouvelles routes pour livraison et évaluation
+  livrerTravail: (idAssignation, fichier, commentaire) => {
+    const formData = new FormData();
+    formData.append('fichier', fichier);
+    if (commentaire) {
+      formData.append('commentaire', commentaire);
+    }
+    return api.post(`/api/travaux/livrer/${idAssignation}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  listerLivraisonsTravail: (idTravail) => api.get(`/api/travaux/travail/${idTravail}/livraisons`),
+  evaluerLivraison: (idLivraison, evaluation) => api.post(`/api/travaux/evaluer/${idLivraison}`, evaluation),
+  telechargerFichierLivraison: (idLivraison) => {
+    return api.get(`/api/travaux/telecharger/${idLivraison}`, {
+      responseType: 'blob',
+    });
+  },
 };
 
 export default api;
