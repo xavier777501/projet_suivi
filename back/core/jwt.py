@@ -5,8 +5,12 @@ from fastapi import HTTPException, status
 import secrets
 import hashlib
 
+import os
+
 # Configuration JWT
-SECRET_KEY = secrets.token_urlsafe(32)  # Générer une clé secrète en production
+# Utiliser une clé fixe depuis les variables d'environnement pour éviter
+# que les tokens deviennent invalides après un redémarrage du serveur
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-secret-key-change-in-production-2024")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

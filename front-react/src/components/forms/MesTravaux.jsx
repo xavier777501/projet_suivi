@@ -38,55 +38,34 @@ const MesTravaux = ({ onBack }) => {
         setSelectedAssignation(null);
     };
 
-    const handleDownloadFile = async (idLivraison) => {
+    const handleDownloadFile = (idLivraison) => {
+        // SOLUTION ANTI-IDM v2: Téléchargement via iframe caché
+
         try {
-            const response = await travauxAPI.telechargerLivraison(idLivraison);
+            const token = sessionStorage.getItem('authToken');
 
-            // Axios renvoie le blob directement dans response.data quand responseType: 'blob'
-            const blob = response.data;
-            const contentDisposition = response.headers['content-disposition'];
-            let filename = 'fichier_livraison';
-
-            if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                if (filenameMatch) filename = filenameMatch[1];
+            if (!token) {
+                setError('Session expirée. Veuillez vous reconnecter.');
+                return;
             }
 
-            // MÉTHODE 1 : File System Access API (Anti-IDM)
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: filename,
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    return;
-                } catch (err) {
-                    if (err.name === 'AbortError') return;
-                }
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const downloadUrl = `${baseUrl}/api/travaux/telecharger/${idLivraison}?token=${encodeURIComponent(token)}`;
+
+            // Créer un iframe caché pour déclencher le téléchargement
+            let iframe = document.getElementById('download-iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'download-iframe';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
             }
 
-            // MÉTHODE 2 : Fallback via Blob URL (plus robuste qu'une Data URL)
-            const url = window.URL.createObjectURL(new Blob([blob]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', filename);
-            link.setAttribute('idm', 'false');
-            link.setAttribute('rel', 'noopener noreferrer');
-            link.style.display = 'none';
-            document.body.appendChild(link);
+            iframe.src = downloadUrl;
 
-            setTimeout(() => {
-                link.click();
-                setTimeout(() => {
-                    if (link.parentNode) document.body.removeChild(link);
-                    window.URL.revokeObjectURL(url);
-                }, 1000);
-            }, 50);
         } catch (err) {
             console.error('Erreur téléchargement:', err);
-            setError(err.response?.data?.detail || 'Erreur lors du téléchargement du fichier');
+            setError('Erreur lors du téléchargement du fichier.');
         }
     };
 

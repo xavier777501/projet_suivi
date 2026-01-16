@@ -658,9 +658,34 @@ async def evaluer_livraison(
 @router.get("/telecharger/{id_livraison}")
 async def telecharger_fichier_livraison(
     id_livraison: str,
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_current_user)
+    token: Optional[str] = None,  # Token via URL pour téléchargement direct (anti-IDM)
+    db: Session = Depends(get_db)
 ):
+    """
+    Télécharger le fichier d'une livraison.
+    Accessible au formateur (pour évaluation) et à l'étudiant (sa propre livraison).
+    
+    Le token peut être passé en query parameter (?token=xxx) pour permettre
+    le téléchargement direct via window.open() et contourner IDM.
+    """
+    # Authentification via token en query param ou header Authorization
+    from core.jwt import verify_token
+    
+    current_user = None
+    
+    if token:
+        # Token fourni en query parameter
+        try:
+            payload = verify_token(token)
+            identifiant = payload.get("sub")
+            if identifiant:
+                current_user = db.query(Utilisateur).filter(Utilisateur.identifiant == identifiant).first()
+        except Exception as e:
+            print(f"Erreur décodage token URL: {e}")
+            raise HTTPException(status_code=401, detail="Token invalide")
+    
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Token requis pour le téléchargement")
     """
     Télécharger le fichier d'une livraison.
     Accessible au formateur (pour évaluation) et à l'étudiant (sa propre livraison).
@@ -703,27 +728,55 @@ async def telecharger_fichier_livraison(
     
     # Vérifier que le fichier existe (gestion des chemins relatifs et absolus)
     file_path = livraison.chemin_fichier
+    print(f"DEBUG: Chemin fichier en base: {file_path}")
+    
     if not os.path.isabs(file_path):
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         file_path = os.path.join(base_dir, file_path)
+        print(f"DEBUG: Chemin fichier résolu: {file_path}")
 
     if not os.path.exists(file_path):
+        print(f"DEBUG: FICHIER NON TROUVÉ: {file_path}")
         raise HTTPException(status_code=404, detail="Fichier non trouvé sur le serveur")
     
     # Récupérer le nom original du fichier
     filename = os.path.basename(file_path)
     
-    # Éviter l'interception par IDM en utilisant 'inline' et un header personnalisé pour le nom
-    # IDM intercepte souvent 'attachment'
-    response = FileResponse(
-        path=file_path,
-        media_type='application/octet-stream',
-        content_disposition_type='inline'
-    )
+    # IDM FIX v2: Utiliser Response au lieu de FileResponse
+    # FileResponse envoie 'Accept-Ranges: bytes' ce qui active IDM.
+    # En lisant le fichier manuellement et en renvoyant une Response standard,
+    # on évite ce header et IDM ne devrait pas intercepter.
     
-    # Ajouter le nom de fichier dans un header personnalisé pour le frontend
-    # Il faut gérer l'encodage des caractères spéciaux si nécessaire, mais pour l'instant simple
-    response.headers["X-Filename"] = filename
+    # IDM FIX v3: StreamingResponse
+    # Utilisation d'un générateur pour le streaming et de StreamingResponse
+    # Cela permet de mieux gérer les gros fichiers et d'éviter certains comportements d'IDM
+    
+    try:
+        if not os.path.exists(file_path):
+            print(f"ERREUR: Fichier non trouvé sur le disque: {file_path}")
+            raise HTTPException(status_code=404, detail="Fichier non trouvé sur le disque")
+
+        print(f"Serveur: Envoi du fichier {filename} depuis {file_path}")
+
+        def iterfile():  
+            with open(file_path, mode="rb") as file_like:  
+                yield from file_like  
+
+        from fastapi.responses import StreamingResponse
+        
+        response = StreamingResponse(iterfile(), media_type="application/octet-stream")
+        
+        # Headers pour téléchargement via iframe
+        # Content-Disposition: attachment force le navigateur à télécharger
+        response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
+        response.headers["X-Filename"] = filename
+        response.headers["Access-Control-Expose-Headers"] = "X-Filename, Content-Disposition"
+        
+        return response
+        
+    except Exception as e:
+        print(f"Erreur lecture fichier: {e}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la lecture du fichier")
     # On garde aussi Content-Disposition mais en inline avec filename pour les navigateurs respectueux
     # Note: FileResponse gère déjà content-disposition si on passe filename, mais on veut forcer inline
     # Donc on le définit manuellement si besoin, ou on laisse FileResponse faire base

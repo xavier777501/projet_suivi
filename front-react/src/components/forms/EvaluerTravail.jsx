@@ -88,79 +88,36 @@ const EvaluerTravail = ({ travail, onClose, onSuccess, initialAssignationId }) =
         }
     };
 
-    const handleDownloadFile = async (idLivraison) => {
+    const handleDownloadFile = (idLivraison) => {
+        // SOLUTION ANTI-IDM v2: Téléchargement via iframe caché
+        // Évite les problèmes de fermeture de fenêtre causés par IDM
+
         try {
-            const response = await travauxAPI.telechargerLivraison(idLivraison);
+            const token = sessionStorage.getItem('authToken');
 
-            // Axios renvoie le blob directement dans response.data quand responseType: 'blob'
-            const blob = response.data;
-
-            // Récupérer le nom de fichier
-            // 1. D'abord via le header personnalisé X-Filename (pour contourner IDM)
-            // 2. Ensuite via Content-Disposition
-            // 3. Fallback générique
-            let filename = 'fichier_livraison';
-
-            const xFilename = response.headers['x-filename'];
-            if (xFilename) {
-                filename = decodeURIComponent(xFilename);
-            } else {
-                const contentDisposition = response.headers['content-disposition'];
-                if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-                    if (filenameMatch && filenameMatch[1]) {
-                        filename = filenameMatch[1];
-                    }
-                }
+            if (!token) {
+                setError('Session expirée. Veuillez vous reconnecter.');
+                return;
             }
 
-            // MÉTHODE 1 : File System Access API (Anti-IDM)
-            // Cette méthode est la meilleure car elle ne déclenche pas de navigation ou de lien
-            if ('showSaveFilePicker' in window) {
-                try {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: filename,
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    return;
-                } catch (err) {
-                    if (err.name === 'AbortError') return;
-                    // Si autre erreur, on continue vers la méthode fallback
-                    console.warn('Erreur File System Access API, fallback...', err);
-                }
+            const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const downloadUrl = `${baseUrl}/api/travaux/telecharger/${idLivraison}?token=${encodeURIComponent(token)}`;
+
+            // Créer un iframe caché pour déclencher le téléchargement
+            let iframe = document.getElementById('download-iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'download-iframe';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
             }
 
-            // MÉTHODE 2 : Fallback via Blob URL
-            const url = window.URL.createObjectURL(new Blob([blob]));
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = filename; // C'est souvent ce qui déclenche IDM
-
-            // Astuces Anti-IDM
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-
-            // Ne PAS rajouter au body si possible (Chrome/Edge le supportent hors DOM)
-            // Cela réduit la visibilité pour certains extensions
-            // document.body.appendChild(link); // Commenté intentionnellement
-
-            // Utiliser dispatchEvent au lieu de click() peut parfois contourner les hooks
-            const clickEvent = new MouseEvent('click', {
-                view: window,
-                bubbles: true,
-                cancelable: true
-            });
-            link.dispatchEvent(clickEvent);
-
-            setTimeout(() => {
-                window.URL.revokeObjectURL(url);
-            }, 2000);
+            // Déclencher le téléchargement via l'iframe
+            iframe.src = downloadUrl;
 
         } catch (err) {
             console.error('Erreur téléchargement:', err);
-            setError(err.response?.data?.detail || 'Erreur lors du téléchargement. Si vous utilisez IDM, essayez de le désactiver pour ce site.');
+            setError('Erreur lors du téléchargement du fichier.');
         }
     };
 
