@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test du problème de session</title>
+</head>
+<body>
+    <h1>Test du problème de localStorage partagé</h1>
+    
+    <div>
+        <h2>Simulation Onglet 1 - Étudiant</h2>
+        <button onclick="loginEtudiant()">Se connecter comme Étudiant</button>
+        <button onclick="checkAuth()">Vérifier ma session</button>
+        <div id="status1"></div>
+    </div>
+    
+    <div>
+        <h2>Simulation Onglet 2 - Formateur</h2>
+        <button onclick="loginFormateur()">Se connecter comme Formateur</button>
+        <button onclick="checkAuth()">Vérifier ma session</button>
+        <div id="status2"></div>
+    </div>
+
+    <script>
+        // Simulation des fonctions d'auth actuelles
+        function saveAuthData(token, userData) {
+            localStorage.setItem('authToken', token);
+            localStorage.setItem('userData', JSON.stringify(userData));
+        }
+
+        function getAuthData() {
+            const token = localStorage.getItem('authToken');
+            const userData = localStorage.getItem('userData');
+            
+            if (token && userData) {
+                return {
+                    token,
+                    user: JSON.parse(userData)
+                };
+            }
+            
+            return null;
+        }
+
+        function loginEtudiant() {
+            saveAuthData('token_etudiant_123', {
+                nom: 'Dupont',
+                prenom: 'Jean',
+                role: 'ETUDIANT',
+                email: 'jean.dupont@email.com'
+            });
+            
+            document.getElementById('status1').innerHTML = 
+                '<span style="color: green;">✅ Étudiant connecté</span>';
+            
+            console.log('Étudiant connecté, localStorage:', localStorage.getItem('userData'));
+        }
+
+        function loginFormateur() {
+            saveAuthData('token_formateur_456', {
+                nom: 'Martin',
+                prenom: 'Marie',
+                role: 'FORMATEUR',
+                email: 'marie.martin@email.com'
+            });
+            
+            document.getElementById('status2').innerHTML = 
+                '<span style="color: green;">✅ Formateur connecté</span>';
+            
+            console.log('Formateur connecté, localStorage:', localStorage.getItem('userData'));
+        }
+
+        function checkAuth() {
+            const authData = getAuthData();
+            
+            if (authData) {
+                const message = `Connecté comme: ${authData.user.prenom} ${authData.user.nom} (${authData.user.role})`;
+                document.getElementById('status1').innerHTML = message;
+                document.getElementById('status2').innerHTML = message;
+                console.log('Session actuelle:', authData.user);
+            } else {
+                document.getElementById('status1').innerHTML = '<span style="color: red;">❌ Non connecté</span>';
+                document.getElementById('status2').innerHTML = '<span style="color: red;">❌ Non connecté</span>';
+            }
+        }
+
+        // Vérification automatique toutes les 2 secondes
+        setInterval(checkAuth, 2000);
+    </script>
+</body>
+</html>
