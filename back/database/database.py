@@ -28,7 +28,11 @@ SQLALCHEMY_DATABASE_URL = url
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, 
-    connect_args=connect_args
+    connect_args=connect_args,
+    pool_pre_ping=True,      # Vérifie la connexion avant chaque requête
+    pool_recycle=300,        # Recycle les connexions toutes les 5 minutes pour éviter les timeouts
+    pool_size=5,             # Taille du pool par défaut
+    max_overflow=10          # Autorise jusqu'à 10 connexions supplémentaires temporaires
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -12,8 +12,8 @@
   background: var(--surface-color);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  padding: 3.5rem 3rem;
-  border-radius: var(--radius-lg);
+  padding: 3rem 2.5rem;
+  border-radius: var(--radius-xl);
   box-shadow: var(--card-shadow);
   border: 1px solid var(--border-color);
   width: 100%;
@@ -88,13 +88,14 @@
 
 .modern-input {
   width: 100%;
-  padding: 0.875rem 1rem 0.875rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  font-size: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  font-size: 1.0625rem;
   transition: var(--transition-smooth);
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(255, 255, 255, 0.04);
   color: var(--text-primary);
+  height: 54px;
 }
 
 [data-theme="light"] .modern-input {
