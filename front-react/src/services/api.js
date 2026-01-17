@@ -70,6 +70,7 @@ export const dashboardAPI = {
   getDEDashboard: () => api.get('/api/dashboard/de'),
   getFormateurDashboard: () => api.get('/api/dashboard/formateur'),
   getEtudiantDashboard: () => api.get('/api/dashboard/etudiant'),
+  getClassement: () => api.get('/api/dashboard/etudiant/classement'),
 };
 
 // ==================== GESTION COMPTES ====================

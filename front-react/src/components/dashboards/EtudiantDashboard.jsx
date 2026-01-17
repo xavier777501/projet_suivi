@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { BookOpen, FileText, BarChart3, LogOut, User, Layout, Bell, Sun, Moon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, FileText, BarChart3, LogOut, User, Layout, Bell, Sun, Moon, Award, TrendingUp } from 'lucide-react';
 import QuickAccessFab from '../common/QuickAccessFab';
 import { useTheme } from '../../contexts/ThemeContext';
 import MesTravaux from '../forms/MesTravaux';
+import { travauxAPI, dashboardAPI } from '../../services/api';
 import './EtudiantDashboard.css';
 
 const EtudiantDashboard = ({ onLogout }) => {
@@ -16,6 +17,12 @@ const EtudiantDashboard = ({ onLogout }) => {
     // État pour gérer l'affichage de la page MesTravaux
     const [showMesTravaux, setShowMesTravaux] = useState(false);
     const [showProfilePopup, setShowProfilePopup] = useState(false);
+
+    // États pour les notes et le classement
+    const [mesNotes, setMesNotes] = useState([]);
+    const [classement, setClassement] = useState(null);
+    const [loadingNotes, setLoadingNotes] = useState(false);
+    const [loadingClassement, setLoadingClassement] = useState(false);
 
     // Référence pour le conteneur du profil
     const profileRef = React.useRef(null);
@@ -66,6 +73,41 @@ const EtudiantDashboard = ({ onLogout }) => {
         setShowMesTravaux(false);
         if (activeTab === 'travaux') {
             changeActiveTab('dashboard');
+        }
+    };
+
+    // Charger les notes quand on accède à l'onglet
+    useEffect(() => {
+        if (activeTab === 'notes') {
+            loadMesNotes();
+        } else if (activeTab === 'classement') {
+            loadClassement();
+        }
+    }, [activeTab]);
+
+    const loadMesNotes = async () => {
+        try {
+            setLoadingNotes(true);
+            const response = await travauxAPI.mesTravaux();
+            // Filtrer uniquement les travaux notés
+            const notesOnly = (response.data || []).filter(t => t.statut === 'NOTE');
+            setMesNotes(notesOnly);
+        } catch (err) {
+            console.error('Erreur chargement notes:', err);
+        } finally {
+            setLoadingNotes(false);
+        }
+    };
+
+    const loadClassement = async () => {
+        try {
+            setLoadingClassement(true);
+            const response = await dashboardAPI.getClassement();
+            setClassement(response.data);
+        } catch (err) {
+            console.error('Erreur chargement classement:', err);
+        } finally {
+            setLoadingClassement(false);
         }
     };
 
@@ -128,6 +170,131 @@ const EtudiantDashboard = ({ onLogout }) => {
         </div>
     );
 
+    const renderMesNotes = () => (
+        <div className="etudiant-content">
+            <h2>Mes Notes</h2>
+            {loadingNotes ? (
+                <div className="loading-state">
+                    <div className="loading-spinner"></div>
+                    <p>Chargement de vos notes...</p>
+                </div>
+            ) : mesNotes.length > 0 ? (
+                <div className="notes-container">
+                    <div className="notes-summary">
+                        <div className="summary-card">
+                            <Award size={32} />
+                            <div>
+                                <span className="summary-label">Moyenne générale</span>
+                                <span className="summary-value">
+                                    {(mesNotes.reduce((acc, n) => acc + (parseFloat(n.livraison?.note_attribuee) || 0), 0) / mesNotes.length).toFixed(2)} / 20
+                                </span>
+                            </div>
+                        </div>
+                        <div className="summary-card">
+                            <FileText size={32} />
+                            <div>
+                                <span className="summary-label">Travaux notés</span>
+                                <span className="summary-value">{mesNotes.length}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="notes-list">
+                        {mesNotes.map((travail) => (
+                            <div key={travail.id_assignation} className="note-card">
+                                <div className="note-header">
+                                    <h3>{travail.titre_travail}</h3>
+                                    <span className="note-badge">
+                                        {travail.livraison?.note_attribuee} / {travail.note_max}
+                                    </span>
+                                </div>
+                                <div className="note-meta">
+                                    <span className="matiere">
+                                        <BookOpen size={16} />
+                                        {travail.nom_matiere}
+                                    </span>
+                                    <span className="date">
+                                        Évalué le {new Date(travail.livraison?.date_livraison).toLocaleDateString('fr-FR')}
+                                    </span>
+                                </div>
+                                {travail.livraison?.feedback && (
+                                    <div className="note-feedback">
+                                        <strong>Commentaire du formateur:</strong>
+                                        <p>{travail.livraison.feedback}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div className="empty-state">
+                    <FileText size={64} opacity={0.3} />
+                    <h3>Aucune note disponible</h3>
+                    <p>Vos travaux évalués apparaîtront ici.</p>
+                </div>
+            )}
+        </div>
+    );
+
+    const renderClassement = () => (
+        <div className="etudiant-content">
+            <h2>Classement de la Promotion</h2>
+            {loadingClassement ? (
+                <div className="loading-state">
+                    <div className="loading-spinner"></div>
+                    <p>Chargement du classement...</p>
+                </div>
+            ) : classement ? (
+                <div className="classement-container">
+                    <div className="classement-header">
+                        <div className="promo-info">
+                            <h3>{classement.promotion}</h3>
+                            <p>{classement.annee_academique}</p>
+                        </div>
+                        <div className="mon-rang-card">
+                            <TrendingUp size={32} />
+                            <div>
+                                <span className="rang-label">Votre position</span>
+                                <span className="rang-value">#{classement.mon_rang} / {classement.total_etudiants}</span>
+                                <span className="moyenne-value">Moyenne: {classement.ma_moyenne} / 20</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="classement-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rang</th>
+                                    <th>Étudiant</th>
+                                    <th>Matricule</th>
+                                    <th>Moyenne</th>
+                                    <th>Travaux notés</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {classement.classement.map((etudiant) => (
+                                    <tr key={etudiant.id_etudiant} className={etudiant.est_moi ? 'highlight-row' : ''}>
+                                        <td className="rang-cell">#{etudiant.rang}</td>
+                                        <td>{etudiant.prenom} {etudiant.nom}</td>
+                                        <td>{etudiant.matricule}</td>
+                                        <td className="moyenne-cell">{etudiant.moyenne} / 20</td>
+                                        <td>{etudiant.nombre_travaux_notes}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ) : (
+                <div className="empty-state">
+                    <BarChart3 size={64} opacity={0.3} />
+                    <h3>Classement non disponible</h3>
+                    <p>Le classement sera disponible une fois que des notes auront été attribuées.</p>
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <div className="etudiant-dashboard-container">
             {/* Sidebar */}
@@ -161,6 +328,20 @@ const EtudiantDashboard = ({ onLogout }) => {
                         <BookOpen size={20} />
                         <span>Planning</span>
                     </button>
+                    <button
+                        className={`etudiant-nav-item ${activeTab === 'notes' ? 'active' : ''}`}
+                        onClick={() => changeActiveTab('notes')}
+                    >
+                        <Award size={20} />
+                        <span>Mes Notes</span>
+                    </button>
+                    <button
+                        className={`etudiant-nav-item ${activeTab === 'classement' ? 'active' : ''}`}
+                        onClick={() => changeActiveTab('classement')}
+                    >
+                        <TrendingUp size={20} />
+                        <span>Classement</span>
+                    </button>
                 </nav>
 
                 <div className="etudiant-sidebar-footer">
@@ -179,6 +360,8 @@ const EtudiantDashboard = ({ onLogout }) => {
                             {activeTab === 'dashboard' && 'Tableau de bord'}
                             {activeTab === 'travaux' && 'Mes Travaux'}
                             {activeTab === 'planning' && 'Mon Planning'}
+                            {activeTab === 'notes' && 'Mes Notes'}
+                            {activeTab === 'classement' && 'Classement'}
                         </h1>
                     </div>
 
@@ -237,6 +420,8 @@ const EtudiantDashboard = ({ onLogout }) => {
                 <div className="etudiant-dashboard-content">
                     {activeTab === 'dashboard' && renderDashboard()}
                     {activeTab === 'planning' && renderPlanning()}
+                    {activeTab === 'notes' && renderMesNotes()}
+                    {activeTab === 'classement' && renderClassement()}
                 </div>
             </main>
 

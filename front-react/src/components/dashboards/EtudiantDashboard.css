@@ -223,6 +223,300 @@
     transform: scale(1.2) rotate(5deg);
 }
 
+/* Notes Container */
+.notes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.notes-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background: var(--surface-color);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: var(--card-shadow);
+    transition: var(--transition-smooth);
+}
+
+.summary-card svg {
+    color: var(--accent-color);
+    flex-shrink: 0;
+}
+
+.summary-label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.summary-value {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.notes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.note-card {
+    background: var(--surface-color);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--card-shadow);
+    transition: var(--transition-smooth);
+}
+
+.note-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-color);
+}
+
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.note-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-primary);
+}
+
+.note-badge {
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.note-meta {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.note-meta .matiere,
+.note-meta .date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.note-feedback {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: rgba(var(--accent-rgb), 0.05);
+    border-left: 3px solid var(--accent-color);
+    border-radius: 4px;
+}
+
+.note-feedback strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.note-feedback p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+/* Classement Container */
+.classement-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.classement-header {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.promo-info {
+    background: var(--surface-color);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--card-shadow);
+}
+
+.promo-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.promo-info p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
+.mon-rang-card {
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 8px 24px rgba(var(--accent-rgb), 0.3);
+}
+
+.mon-rang-card svg {
+    flex-shrink: 0;
+}
+
+.rang-label {
+    display: block;
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+}
+
+.rang-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+}
+
+.moyenne-value {
+    display: block;
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.classement-table {
+    background: var(--surface-color);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    overflow-x: auto;
+}
+
+.classement-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.classement-table thead {
+    border-bottom: 2px solid var(--border-color);
+}
+
+.classement-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.classement-table td {
+    padding: 1rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.classement-table tbody tr {
+    transition: var(--transition-smooth);
+}
+
+.classement-table tbody tr:hover {
+    background: var(--surface-hover);
+}
+
+.classement-table .highlight-row {
+    background: rgba(var(--accent-rgb), 0.1);
+    font-weight: 600;
+}
+
+.classement-table .highlight-row:hover {
+    background: rgba(var(--accent-rgb), 0.15);
+}
+
+.rang-cell {
+    font-weight: 700;
+    color: var(--accent-color);
+}
+
+.moyenne-cell {
+    font-weight: 600;
+}
+
+/* Loading and Empty States */
+.loading-state,
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.empty-state h3 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    margin: 0;
+    color: var(--text-secondary);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .etudiant-sidebar {
@@ -237,5 +531,13 @@
 
     .etudiant-main-content {
         margin-left: 0;
+    }
+
+    .classement-header {
+        grid-template-columns: 1fr;
+    }
+
+    .notes-summary {
+        grid-template-columns: 1fr;
     }
 }

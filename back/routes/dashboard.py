@@ -390,3 +390,89 @@ def get_etudiant_dashboard(
             for row in mes_assignations
         ]
     }
+
+@router.get("/etudiant/classement")
+def get_classement_promotion(
+    current_user: Utilisateur = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Classement général de la promotion de l'étudiant (US 11.1)
+    Calcule la moyenne de chaque étudiant et retourne le classement
+    """
+    if current_user.role != RoleEnum.ETUDIANT:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accès réservé aux Étudiants"
+        )
+    
+    # Récupérer l'étudiant actuel
+    etudiant_actuel = db.query(Etudiant).filter(
+        Etudiant.identifiant == current_user.identifiant
+    ).first()
+    
+    if not etudiant_actuel or not etudiant_actuel.id_promotion:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profil étudiant ou promotion non trouvé"
+        )
+    
+    # Récupérer tous les étudiants de la même promotion
+    etudiants_promotion = db.query(Etudiant).filter(
+        Etudiant.id_promotion == etudiant_actuel.id_promotion,
+        Etudiant.statut == StatutEtudiantEnum.ACTIF
+    ).all()
+    
+    # Calculer la moyenne pour chaque étudiant
+    classement = []
+    for etudiant in etudiants_promotion:
+        # Récupérer toutes les notes de l'étudiant
+        notes = db.query(Assignation.note).filter(
+            Assignation.id_etudiant == etudiant.id_etudiant,
+            Assignation.statut == StatutAssignationEnum.NOTE,
+            Assignation.note.isnot(None)
+        ).all()
+        
+        if notes:
+            moyenne = sum(float(note[0]) for note in notes) / len(notes)
+            nombre_travaux_notes = len(notes)
+        else:
+            moyenne = 0.0
+            nombre_travaux_notes = 0
+        
+        classement.append({
+            "id_etudiant": etudiant.id_etudiant,
+            "nom": etudiant.utilisateur.nom,
+            "prenom": etudiant.utilisateur.prenom,
+            "matricule": etudiant.matricule,
+            "moyenne": round(moyenne, 2),
+            "nombre_travaux_notes": nombre_travaux_notes,
+            "est_moi": etudiant.id_etudiant == etudiant_actuel.id_etudiant
+        })
+    
+    # Trier par moyenne décroissante
+    classement.sort(key=lambda x: x["moyenne"], reverse=True)
+    
+    # Ajouter le rang
+    for index, item in enumerate(classement, start=1):
+        item["rang"] = index
+    
+    # Trouver le rang de l'étudiant actuel
+    mon_rang = next(
+        (item["rang"] for item in classement if item["est_moi"]),
+        None
+    )
+    
+    ma_moyenne = next(
+        (item["moyenne"] for item in classement if item["est_moi"]),
+        0.0
+    )
+    
+    return {
+        "promotion": etudiant_actuel.promotion.libelle,
+        "annee_academique": etudiant_actuel.promotion.annee_academique,
+        "mon_rang": mon_rang,
+        "ma_moyenne": ma_moyenne,
+        "total_etudiants": len(classement),
+        "classement": classement
+    }
