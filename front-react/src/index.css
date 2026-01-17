@@ -1,137 +1,122 @@
+/* CSS de base pour l'application */
+
 :root {
-  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
-  
-  font-family: var(--font-main);
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  
-  /* Transition fluide pour le changement de thème */
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-* {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-/* Mode sombre (par défaut) */
-:root,
-[data-theme="dark"] {
-  --bg-color: #0f172a;
-  --surface-color: #1e293b;
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-color: #2563eb;
-  --accent-hover: #3b82f6;
-  --border-color: #334155;
-  --error-color: #ef4444;
-  --success-color: #10b981;
-
-  color-scheme: dark;
-  color: var(--text-primary);
-  background-color: var(--bg-color);
-}
-
-/* Mode clair */
-[data-theme="light"] {
-  --bg-color: #ffffff;
-  --surface-color: #f8fafc;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --accent-color: #2563eb;
-  --accent-hover: #1d4ed8;
-  --border-color: #e2e8f0;
-  --error-color: #dc2626;
-  --success-color: #059669;
-
-  color-scheme: light;
-  color: var(--text-primary);
-  background-color: var(--bg-color);
 }
 
 a {
   font-weight: 500;
-  color: var(--accent-color);
+  color: #646cff;
   text-decoration: inherit;
-  transition: color 0.2s;
 }
-
 a:hover {
-  color: var(--accent-hover);
+  color: #535bf2;
 }
 
 body {
   margin: 0;
+  display: flex;
+  place-items: center;
   min-width: 320px;
   min-height: 100vh;
-  overflow-x: hidden;
-  background-color: var(--bg-color);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-/* Amélioration du scrolling */
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-  -webkit-tap-highlight-color: transparent;
-}
-
-h1,
-h2,
-h3,
-h4 {
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
 }
 
 button {
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid transparent;
   padding: 0.6em 1.2em;
-  font-size: 0.95em;
-  font-weight: 600;
+  font-size: 1em;
+  font-weight: 500;
   font-family: inherit;
-  background-color: var(--surface-color);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-button:hover {
-  border-color: var(--accent-color);
-  background-color: var(--accent-color);
+  background-color: #1a1a1a;
   color: white;
+  cursor: pointer;
+  transition: border-color 0.25s;
 }
-
-button:active {
-  transform: scale(0.98);
+button:hover {
+  border-color: #646cff;
 }
-
+button:focus,
 button:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
+  outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* Classes utilitaires pour le thème */
-.bg-slate-900 {
-  background-color: var(--bg-color);
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+    color: #213547;
+  }
 }
 
-.bg-slate-800 {
-  background-color: var(--surface-color);
+/* Styles pour l'application */
+.app {
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
-.text-slate-50 {
-  color: var(--text-primary);
+.app.loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
-.text-slate-400 {
-  color: var(--text-secondary);
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Styles pour les composants de debug */
+.debug-panel {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 9999;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  border: 1px solid #ffcdd2;
 }

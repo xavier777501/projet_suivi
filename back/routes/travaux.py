@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -7,18 +6,19 @@ from pydantic import BaseModel
 from decimal import Decimal
 import os
 import shutil
+from pathlib import Path
 
 from database.database import get_db
 from models import (
     Utilisateur, Formateur, Etudiant, EspacePedagogique, 
-    Travail, Assignation, Inscription, Livraison, Matiere,
-    RoleEnum, TypeTravailEnum, StatutAssignationEnum
+    Travail, Assignation, Inscription, RoleEnum, TypeTravailEnum, StatutAssignationEnum,
+    Matiere
 )
 from core.auth import get_current_user
 from utils.generators import generer_identifiant_unique
 from utils.email_service import email_service
 
-router = APIRouter()
+router = APIRouter(prefix="/api/travaux", tags=["Travaux"])
 
 # ==================== SCHEMAS ====================
 
@@ -62,68 +62,37 @@ class AssignationResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class LivraisonCreate(BaseModel):
-    commentaire: Optional[str] = None
-
-class LivraisonResponse(BaseModel):
-    id_livraison: str
+class SoumissionTravail(BaseModel):
     id_assignation: str
-    chemin_fichier: str
-    date_livraison: datetime
-    commentaire: Optional[str]
-    note_attribuee: Optional[Decimal]
-    feedback: Optional[str]
+    commentaire_etudiant: Optional[str] = None
 
-    class Config:
-        from_attributes = True
-
-class LivraisonEtudiantResponse(BaseModel):
-    id_livraison: str
+class EvaluationTravail(BaseModel):
     id_assignation: str
-    chemin_fichier: str
-    date_livraison: datetime
-    commentaire: Optional[str]
-
-    class Config:
-        from_attributes = True
-
-class EvaluationRequest(BaseModel):
-    note_attribuee: Decimal
-    feedback: Optional[str] = None
+    note: Decimal
+    commentaire_formateur: str
 
 class MesTravauxResponse(BaseModel):
     id_assignation: str
     id_travail: str
     titre_travail: str
-    description: str
+    description_travail: str
     nom_matiere: str
+    type_travail: TypeTravailEnum
     date_assignment: datetime
     date_echeance: datetime
+    date_soumission: Optional[datetime] = None
+    date_evaluation: Optional[datetime] = None
     statut: StatutAssignationEnum
-    type_travail: TypeTravailEnum
+    note: Optional[Decimal] = None
     note_max: Decimal
-    livraison: Optional[LivraisonEtudiantResponse] = None
-
-    class Config:
-        from_attributes = True
-
-class TravailAvecLivraisonsResponse(BaseModel):
-    id_travail: str
-    titre: str
-    description: str
-    type_travail: TypeTravailEnum
-    date_echeance: datetime
-    note_max: Decimal
-    assignations: List[dict]  # Contient les assignations avec leurs livraisons
+    commentaire_etudiant: Optional[str] = None
+    commentaire_formateur: Optional[str] = None
+    fichier_path: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 # ==================== ROUTES ====================
-
-@router.get("/ping")
-async def ping_travaux():
-    return {"status": "ok", "message": "Router travaux est bien chargé"}
 
 @router.post("/creer", response_model=TravailResponse, status_code=status.HTTP_201_CREATED)
 async def creer_travail(
@@ -224,6 +193,7 @@ async def lister_travaux_espace(
     
     travaux = db.query(Travail).filter(Travail.id_espace == id_espace).order_by(Travail.date_creation.desc()).all()
     return travaux
+
 
 @router.get("/mes-assignations", response_model=List[AssignationResponse])
 async def lister_mes_assignations(
@@ -328,6 +298,7 @@ async def lister_mes_travaux(
 
     return resultats
 
+
 @router.get("/{id_travail}", response_model=TravailResponse)
 async def obtenir_details_travail(
     id_travail: str,
@@ -428,112 +399,13 @@ async def assigner_travail(
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
 
-# ==================== NOUVELLES ROUTES POUR LIVRAISON ET ÉVALUATION ====================
-
-@router.post("/livrer/{id_assignation}", response_model=LivraisonResponse, status_code=status.HTTP_201_CREATED)
-async def livrer_travail(
-    id_assignation: str,
-    fichier: UploadFile = File(...),
-    commentaire: Optional[str] = None,
+@router.get("/mes-assignations", response_model=List[AssignationResponse])
+async def lister_mes_assignations(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user)
 ):
     """
-    Soumettre (livrer) un travail - US Étudiant
-    L'étudiant peut uploader un fichier et ajouter un commentaire.
-    """
-    if current_user.role != RoleEnum.ETUDIANT:
-        raise HTTPException(status_code=403, detail="Seuls les étudiants peuvent livrer des travaux")
-    
-    etudiant = db.query(Etudiant).filter(Etudiant.identifiant == current_user.identifiant).first()
-    if not etudiant:
-        raise HTTPException(status_code=404, detail="Profil étudiant non trouvé")
-
-    # Vérifier que l'assignation existe et appartient à l'étudiant
-    assignation = db.query(Assignation).filter(
-        Assignation.id_assignation == id_assignation,
-        Assignation.id_etudiant == etudiant.id_etudiant
-    ).first()
-    
-    if not assignation:
-        raise HTTPException(status_code=404, detail="Assignation non trouvée")
-
-    # Vérifier si une livraison existe déjà
-    livraison_existante = db.query(Livraison).filter(
-        Livraison.id_assignation == id_assignation
-    ).first()
-    
-    if livraison_existante:
-        raise HTTPException(status_code=400, detail="Ce travail a déjà été livré")
-
-    # Créer le dossier uploads s'il n'existe pas (chemin absolu pour éviter les problèmes)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    upload_dir = os.path.join(base_dir, "uploads")
-    os.makedirs(upload_dir, exist_ok=True)
-    
-    # Générer un nom de fichier unique
-    file_extension = os.path.splitext(fichier.filename)[1]
-    unique_filename = f"{id_assignation}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{file_extension}"
-    file_path = os.path.join(upload_dir, unique_filename)
-    
-    try:
-        # Sauvegarder le fichier
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(fichier.file, buffer)
-        
-        # Créer la livraison en base
-        id_livraison = generer_identifiant_unique("LIV")
-        nouvelle_livraison = Livraison(
-            id_livraison=id_livraison,
-            id_assignation=id_assignation,
-            chemin_fichier=file_path,
-            commentaire=commentaire,
-            date_livraison=datetime.utcnow()
-        )
-        
-        db.add(nouvelle_livraison)
-        
-        # Mettre à jour le statut de l'assignation
-        assignation.statut = StatutAssignationEnum.RENDU
-        db.add(assignation)
-        
-        db.commit()
-        db.refresh(nouvelle_livraison)
-        
-        # Envoyer une notification au formateur (en arrière-plan ou direct pour ce test)
-        try:
-            formateur_user = assignation.travail.espace_pedagogique.formateur.utilisateur
-            email_service.envoyer_email_livraison_travail(
-                destinataire=formateur_user.email,
-                prenom_formateur=formateur_user.prenom,
-                nom_etudiant=current_user.nom,
-                prenom_etudiant=current_user.prenom,
-                titre_travail=assignation.travail.titre,
-                nom_matiere=assignation.travail.espace_pedagogique.matiere.nom_matiere
-            )
-        except Exception as e:
-            print(f"⚠️ Erreur notification formateur : {e}")
-            
-        return nouvelle_livraison
-        
-    except Exception as e:
-        db.rollback()
-        # Supprimer le fichier en cas d'erreur
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Erreur lors de la livraison : {str(e)}"
-        )
-
-@router.get("/travail/{id_travail}/livraisons", response_model=TravailAvecLivraisonsResponse)
-async def lister_livraisons_travail(
-    id_travail: str,
-    db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(get_current_user)
-):
-    """
-    Lister toutes les livraisons d'un travail - Pour le formateur
+    Lister toutes les assignations effectuées par le formateur connecté.
     """
     if current_user.role != RoleEnum.FORMATEUR:
         raise HTTPException(status_code=403, detail="Accès réservé aux formateurs")
@@ -542,74 +414,180 @@ async def lister_livraisons_travail(
     if not formateur:
         raise HTTPException(status_code=404, detail="Profil formateur non trouvé")
 
-    # Vérifier que le travail existe et appartient au formateur
-    travail = db.query(Travail).join(
+    # Récupérer les assignations pour les espaces du formateur
+    assignations = db.query(
+        Assignation.id_assignation,
+        Travail.titre.label("titre_travail"),
+        Matiere.nom_matiere,
+        Utilisateur.nom.label("nom_etudiant"),
+        Utilisateur.prenom.label("prenom_etudiant"),
+        Assignation.date_assignment,
+        Travail.date_echeance,
+        Assignation.statut,
+        Travail.type_travail
+    ).join(
+        Travail, Assignation.id_travail == Travail.id_travail
+    ).join(
         EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
-    ).filter(
-        Travail.id_travail == id_travail,
-        EspacePedagogique.id_formateur == formateur.id_formateur
-    ).first()
-    
-    if not travail:
-        raise HTTPException(status_code=404, detail="Travail non trouvé ou accès non autorisé")
-
-    # Récupérer toutes les assignations avec leurs livraisons
-    assignations = db.query(Assignation).join(
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
         Etudiant, Assignation.id_etudiant == Etudiant.id_etudiant
     ).join(
         Utilisateur, Etudiant.identifiant == Utilisateur.identifiant
     ).filter(
-        Assignation.id_travail == id_travail
-    ).all()
+        EspacePedagogique.id_formateur == formateur.id_formateur
+    ).order_by(Assignation.date_assignment.desc()).all()
 
-    assignations_data = []
-    for assignation in assignations:
-        livraison = db.query(Livraison).filter(
-            Livraison.id_assignation == assignation.id_assignation
-        ).first()
-        
-        livraison_data = None
-        if livraison:
-            livraison_data = {
-                "id_livraison": livraison.id_livraison,
-                "chemin_fichier": livraison.chemin_fichier,
-                "date_livraison": livraison.date_livraison,
-                "commentaire": livraison.commentaire,
-                "note_attribuee": livraison.note_attribuee,
-                "feedback": livraison.feedback
-            }
-        
-        assignation_data = {
-            "id_assignation": assignation.id_assignation,
-            "nom_etudiant": assignation.etudiant.utilisateur.nom,
-            "prenom_etudiant": assignation.etudiant.utilisateur.prenom,
-            "email_etudiant": assignation.etudiant.utilisateur.email,
-            "date_assignment": assignation.date_assignment,
-            "statut": assignation.statut,
-            "livraison": livraison_data
-        }
-        assignations_data.append(assignation_data)
+    return assignations
 
-    return TravailAvecLivraisonsResponse(
-        id_travail=travail.id_travail,
-        titre=travail.titre,
-        description=travail.description,
-        type_travail=travail.type_travail,
-        date_echeance=travail.date_echeance,
-        note_max=travail.note_max,
-        assignations=assignations_data
-    )
-
-@router.post("/evaluer/{id_livraison}", response_model=LivraisonResponse)
-async def evaluer_livraison(
-    id_livraison: str,
-    evaluation: EvaluationRequest,
+@router.get("/mes-travaux", response_model=List[MesTravauxResponse])
+async def lister_mes_travaux(
     db: Session = Depends(get_db),
     current_user: Utilisateur = Depends(get_current_user)
 ):
     """
-    Évaluer une livraison - US Formateur
-    Le formateur peut attribuer une note et un feedback.
+    Lister tous les travaux assignés à l'étudiant connecté (US 3)
+    """
+    if current_user.role != RoleEnum.ETUDIANT:
+        raise HTTPException(status_code=403, detail="Accès réservé aux étudiants")
+    
+    etudiant = db.query(Etudiant).filter(Etudiant.identifiant == current_user.identifiant).first()
+    if not etudiant:
+        raise HTTPException(status_code=404, detail="Profil étudiant non trouvé")
+
+    # Récupérer toutes les assignations de l'étudiant avec les détails
+    assignations = db.query(
+        Assignation.id_assignation,
+        Assignation.id_travail,
+        Travail.titre.label("titre_travail"),
+        Travail.description.label("description_travail"),
+        Matiere.nom_matiere,
+        Travail.type_travail,
+        Assignation.date_assignment,
+        Travail.date_echeance,
+        Assignation.date_soumission,
+        Assignation.date_evaluation,
+        Assignation.statut,
+        Assignation.note,
+        Travail.note_max,
+        Assignation.commentaire_etudiant,
+        Assignation.commentaire_formateur,
+        Assignation.fichier_path
+    ).join(
+        Travail, Assignation.id_travail == Travail.id_travail
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).filter(
+        Assignation.id_etudiant == etudiant.id_etudiant
+    ).order_by(Travail.date_echeance.asc()).all()
+
+    return assignations
+
+@router.post("/soumettre")
+async def soumettre_travail(
+    id_assignation: str = Form(...),
+    commentaire_etudiant: Optional[str] = Form(None),
+    fichier: Optional[UploadFile] = File(None),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """
+    Soumettre un travail (US 4)
+    L'étudiant peut soumettre son travail avec un commentaire et optionnellement un fichier
+    """
+    if current_user.role != RoleEnum.ETUDIANT:
+        raise HTTPException(status_code=403, detail="Accès réservé aux étudiants")
+    
+    etudiant = db.query(Etudiant).filter(Etudiant.identifiant == current_user.identifiant).first()
+    if not etudiant:
+        raise HTTPException(status_code=404, detail="Profil étudiant non trouvé")
+
+    # Récupérer l'assignation
+    assignation = db.query(Assignation).filter(
+        Assignation.id_assignation == id_assignation,
+        Assignation.id_etudiant == etudiant.id_etudiant
+    ).first()
+    
+    if not assignation:
+        raise HTTPException(status_code=404, detail="Assignation non trouvée")
+    
+    if assignation.statut != StatutAssignationEnum.ASSIGNE:
+        raise HTTPException(status_code=400, detail="Ce travail a déjà été soumis")
+
+    # Gestion du fichier si fourni
+    fichier_path = None
+    if fichier:
+        # Créer le dossier de stockage s'il n'existe pas
+        upload_dir = Path("uploads/travaux")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Générer un nom de fichier unique
+        file_extension = Path(fichier.filename).suffix
+        unique_filename = f"{assignation.id_assignation}_{datetime.now().strftime('%Y%m%d_%H%M%S')}{file_extension}"
+        fichier_path = upload_dir / unique_filename
+        
+        # Sauvegarder le fichier
+        try:
+            with open(fichier_path, "wb") as buffer:
+                shutil.copyfileobj(fichier.file, buffer)
+            fichier_path = str(fichier_path)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload du fichier: {str(e)}")
+
+    # Mettre à jour l'assignation
+    assignation.statut = StatutAssignationEnum.RENDU
+    assignation.date_soumission = datetime.utcnow()
+    assignation.commentaire_etudiant = commentaire_etudiant
+    assignation.fichier_path = fichier_path
+
+    try:
+        db.commit()
+        
+        # Récupérer les informations pour l'email
+        travail = assignation.travail
+        formateur = travail.espace_pedagogique.formateur
+        
+        if formateur and formateur.utilisateur:
+            # Envoyer notification au formateur
+            background_tasks.add_task(
+                email_service.envoyer_email_soumission_travail,
+                destinataire=formateur.utilisateur.email,
+                prenom_formateur=formateur.utilisateur.prenom,
+                prenom_etudiant=current_user.prenom,
+                nom_etudiant=current_user.nom,
+                titre_travail=travail.titre,
+                nom_matiere=travail.espace_pedagogique.matiere.nom_matiere,
+                date_soumission=assignation.date_soumission.strftime("%d/%m/%Y à %H:%M"),
+                commentaire=commentaire_etudiant or "Aucun commentaire"
+            )
+        
+        return {
+            "message": "Travail soumis avec succès",
+            "date_soumission": assignation.date_soumission,
+            "fichier_uploade": fichier.filename if fichier else None
+        }
+        
+    except Exception as e:
+        db.rollback()
+        # Supprimer le fichier en cas d'erreur
+        if fichier_path and os.path.exists(fichier_path):
+            os.remove(fichier_path)
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la soumission: {str(e)}")
+
+@router.put("/evaluer")
+async def evaluer_travail(
+    data: EvaluationTravail,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """
+    Évaluer un travail rendu (US 6 - Backend)
+    Le formateur peut attribuer une note et un commentaire
     """
     if current_user.role != RoleEnum.FORMATEUR:
         raise HTTPException(status_code=403, detail="Seuls les formateurs peuvent évaluer des travaux")
@@ -618,178 +596,106 @@ async def evaluer_livraison(
     if not formateur:
         raise HTTPException(status_code=404, detail="Profil formateur non trouvé")
 
-    # Récupérer la livraison avec vérification d'accès
-    livraison = db.query(Livraison).join(
-        Assignation, Livraison.id_assignation == Assignation.id_assignation
-    ).join(
+    # Récupérer l'assignation avec vérifications
+    assignation = db.query(Assignation).join(
         Travail, Assignation.id_travail == Travail.id_travail
     ).join(
         EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
     ).filter(
-        Livraison.id_livraison == id_livraison,
+        Assignation.id_assignation == data.id_assignation,
         EspacePedagogique.id_formateur == formateur.id_formateur
     ).first()
     
-    if not livraison:
-        raise HTTPException(status_code=404, detail="Livraison non trouvée ou accès non autorisé")
+    if not assignation:
+        raise HTTPException(status_code=404, detail="Assignation non trouvée ou non autorisée")
+    
+    if assignation.statut != StatutAssignationEnum.RENDU:
+        raise HTTPException(status_code=400, detail="Ce travail n'a pas encore été rendu")
 
-    # Vérifier que la note est valide
-    travail = livraison.assignation.travail
-    if evaluation.note_attribuee < 0 or evaluation.note_attribuee > travail.note_max:
+    # Validation de la note
+    travail = assignation.travail
+    if data.note < 0 or data.note > travail.note_max:
         raise HTTPException(
             status_code=400, 
-            detail=f"La note doit être comprise entre 0 et {travail.note_max}"
+            detail=f"La note doit être entre 0 et {travail.note_max}"
         )
 
+    # Mettre à jour l'assignation
+    assignation.statut = StatutAssignationEnum.NOTE
+    assignation.date_evaluation = datetime.utcnow()
+    assignation.note = data.note
+    assignation.commentaire_formateur = data.commentaire_formateur
+
     try:
-        # Mettre à jour la livraison
-        livraison.note_attribuee = evaluation.note_attribuee
-        livraison.feedback = evaluation.feedback
-        
-        # Mettre à jour le statut de l'assignation
-        livraison.assignation.statut = StatutAssignationEnum.NOTE
-        
-        db.add(livraison)
-        db.add(livraison.assignation)
         db.commit()
-        db.refresh(livraison)
         
-        return livraison
+        # Récupérer les informations de l'étudiant pour l'email
+        etudiant = assignation.etudiant
+        
+        if etudiant and etudiant.utilisateur:
+            # Envoyer notification à l'étudiant
+            background_tasks.add_task(
+                email_service.envoyer_email_evaluation_travail,
+                destinataire=etudiant.utilisateur.email,
+                prenom_etudiant=etudiant.utilisateur.prenom,
+                titre_travail=travail.titre,
+                nom_matiere=travail.espace_pedagogique.matiere.nom_matiere,
+                note=float(data.note),
+                note_max=float(travail.note_max),
+                commentaire=data.commentaire_formateur,
+                formateur=f"{current_user.prenom} {current_user.nom}"
+            )
+        
+        return {
+            "message": "Travail évalué avec succès",
+            "note": data.note,
+            "note_max": travail.note_max,
+            "date_evaluation": assignation.date_evaluation
+        }
         
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Erreur lors de l'évaluation : {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'évaluation: {str(e)}")
 
-@router.get("/telecharger/{id_livraison}")
-async def telecharger_fichier_livraison(
-    id_livraison: str,
-    token: Optional[str] = None,  # Token via URL pour téléchargement direct (anti-IDM)
-    db: Session = Depends(get_db)
+@router.get("/assignation/{id_assignation}/fichier")
+async def telecharger_fichier_travail(
+    id_assignation: str,
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
 ):
     """
-    Télécharger le fichier d'une livraison.
-    Accessible au formateur (pour évaluation) et à l'étudiant (sa propre livraison).
-    
-    Le token peut être passé en query parameter (?token=xxx) pour permettre
-    le téléchargement direct via window.open() et contourner IDM.
+    Télécharger le fichier d'un travail soumis
+    Accessible au formateur et à l'étudiant concerné
     """
-    # Authentification via token en query param ou header Authorization
-    from core.jwt import verify_token
+    assignation = db.query(Assignation).filter(
+        Assignation.id_assignation == id_assignation
+    ).first()
     
-    current_user = None
+    if not assignation:
+        raise HTTPException(status_code=404, detail="Assignation non trouvée")
     
-    if token:
-        # Token fourni en query parameter
-        try:
-            payload = verify_token(token)
-            identifiant = payload.get("sub")
-            if identifiant:
-                current_user = db.query(Utilisateur).filter(Utilisateur.identifiant == identifiant).first()
-        except Exception as e:
-            print(f"Erreur décodage token URL: {e}")
-            raise HTTPException(status_code=401, detail="Token invalide")
-    
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Token requis pour le téléchargement")
-    """
-    Télécharger le fichier d'une livraison.
-    Accessible au formateur (pour évaluation) et à l'étudiant (sa propre livraison).
-    """
-    # Récupérer la livraison avec toutes les relations nécessaires pour éviter le lazy loading
-    from sqlalchemy.orm import joinedload
-    
-    livraison = db.query(Livraison).options(
-        joinedload(Livraison.assignation)
-        .joinedload(Assignation.travail)
-        .joinedload(Travail.espace_pedagogique)
-    ).filter(Livraison.id_livraison == id_livraison).first()
-    
-    if not livraison:
-        raise HTTPException(status_code=404, detail="Livraison non trouvée")
-    
-    # Vérifier les droits d'accès
+    # Vérifier les autorisations
     autorise = False
-    
-    if current_user.role == RoleEnum.ETUDIANT:
-        # L'étudiant peut télécharger sa propre livraison
-        etudiant = db.query(Etudiant).filter(Etudiant.identifiant == current_user.identifiant).first()
-        if etudiant and livraison.assignation.id_etudiant == etudiant.id_etudiant:
-            autorise = True
-    
-    elif current_user.role == RoleEnum.FORMATEUR:
-        # Le formateur peut télécharger les livraisons de ses espaces
+    if current_user.role == RoleEnum.FORMATEUR:
         formateur = db.query(Formateur).filter(Formateur.identifiant == current_user.identifiant).first()
         if formateur:
-            travail = livraison.assignation.travail
-            if travail and travail.espace_pedagogique and travail.espace_pedagogique.id_formateur == formateur.id_formateur:
+            travail = assignation.travail
+            if travail.espace_pedagogique.id_formateur == formateur.id_formateur:
                 autorise = True
-    
-    elif current_user.role == RoleEnum.DE:
-        # Le DE peut tout télécharger
-        autorise = True
+    elif current_user.role == RoleEnum.ETUDIANT:
+        etudiant = db.query(Etudiant).filter(Etudiant.identifiant == current_user.identifiant).first()
+        if etudiant and assignation.id_etudiant == etudiant.id_etudiant:
+            autorise = True
     
     if not autorise:
         raise HTTPException(status_code=403, detail="Accès non autorisé à ce fichier")
     
-    # Vérifier que le fichier existe (gestion des chemins relatifs et absolus)
-    file_path = livraison.chemin_fichier
-    print(f"DEBUG: Chemin fichier en base: {file_path}")
+    if not assignation.fichier_path or not os.path.exists(assignation.fichier_path):
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
     
-    if not os.path.isabs(file_path):
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        file_path = os.path.join(base_dir, file_path)
-        print(f"DEBUG: Chemin fichier résolu: {file_path}")
-
-    if not os.path.exists(file_path):
-        print(f"DEBUG: FICHIER NON TROUVÉ: {file_path}")
-        raise HTTPException(status_code=404, detail="Fichier non trouvé sur le serveur")
-    
-    # Récupérer le nom original du fichier
-    filename = os.path.basename(file_path)
-    
-    # IDM FIX v2: Utiliser Response au lieu de FileResponse
-    # FileResponse envoie 'Accept-Ranges: bytes' ce qui active IDM.
-    # En lisant le fichier manuellement et en renvoyant une Response standard,
-    # on évite ce header et IDM ne devrait pas intercepter.
-    
-    # IDM FIX v3: StreamingResponse
-    # Utilisation d'un générateur pour le streaming et de StreamingResponse
-    # Cela permet de mieux gérer les gros fichiers et d'éviter certains comportements d'IDM
-    
-    try:
-        if not os.path.exists(file_path):
-            print(f"ERREUR: Fichier non trouvé sur le disque: {file_path}")
-            raise HTTPException(status_code=404, detail="Fichier non trouvé sur le disque")
-
-        print(f"Serveur: Envoi du fichier {filename} depuis {file_path}")
-
-        def iterfile():  
-            with open(file_path, mode="rb") as file_like:  
-                yield from file_like  
-
-        from fastapi.responses import StreamingResponse
-        
-        response = StreamingResponse(iterfile(), media_type="application/octet-stream")
-        
-        # Headers pour téléchargement via iframe
-        # Content-Disposition: attachment force le navigateur à télécharger
-        response.headers["Content-Disposition"] = f'attachment; filename="{filename}"'
-        response.headers["X-Filename"] = filename
-        response.headers["Access-Control-Expose-Headers"] = "X-Filename, Content-Disposition"
-        
-        return response
-        
-    except Exception as e:
-        print(f"Erreur lecture fichier: {e}")
-        raise HTTPException(status_code=500, detail="Erreur lors de la lecture du fichier")
-    # On garde aussi Content-Disposition mais en inline avec filename pour les navigateurs respectueux
-    # Note: FileResponse gère déjà content-disposition si on passe filename, mais on veut forcer inline
-    # Donc on le définit manuellement si besoin, ou on laisse FileResponse faire base
-    
-    # Pour être sûr que le frontend puisse lire ce header (CORS)
-    response.headers["Access-Control-Expose-Headers"] = "X-Filename, Content-Disposition"
-    
-    return response
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=assignation.fichier_path,
+        filename=os.path.basename(assignation.fichier_path),
+        media_type='application/octet-stream'
+    )

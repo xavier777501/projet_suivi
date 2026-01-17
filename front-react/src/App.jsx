@@ -1,76 +1,74 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './components/Login'
 import ChangePassword from './components/ChangePassword'
-import ResetPassword from './components/ResetPassword'
-import ResetPasswordSuccess from './components/ResetPasswordSuccess'
 import DEDashboard from './components/dashboards/DEDashboard'
 import FormateurDashboard from './components/dashboards/FormateurDashboard'
 import EtudiantDashboard from './components/dashboards/EtudiantDashboard'
+import SessionDebug from './components/debug/SessionDebug'
+import MultiTabDemo from './components/session/MultiTabDemo'
+import TabIsolationWrapper from './components/session/TabIsolationWrapper'
 import { ThemeProvider } from './contexts/ThemeContext'
 import ThemeToggle from './components/common/ThemeToggle'
-import { getAuthData, saveAuthData, clearAuthData } from './utils/auth'
+import { useAuth } from './contexts/AuthContext'
 import './App.css'
 
-function App() {
-  const [authData, setAuthData] = useState(null)
-  const [loading, setLoading] = useState(true)
+function AppContent() {
+  const auth = useAuth();
+  const [currentView, setCurrentView] = useState('loading')
 
   useEffect(() => {
-    // Vérifier si l'utilisateur est déjà connecté
-    const existingAuth = getAuthData()
-    if (existingAuth) {
-      setAuthData(existingAuth)
+    if (auth.isInitialized) {
+      if (auth.isAuthenticated) {
+        setCurrentView(getDashboardView(auth.user.role))
+      } else {
+        setCurrentView('login')
+      }
     }
-    setLoading(false)
-  }, [])
+  }, [auth.isInitialized, auth.isAuthenticated, auth.user])
 
-  const handleLoginSuccess = (data) => {
-    setAuthData(data)
-    
-    if (data.requiresPasswordChange) {
-      // Le changement de mot de passe sera géré par le composant ChangePassword
-      return
-    } else {
-      // Sauvegarder les données d'authentification
-      saveAuthData(data.token, data.user)
+  const getDashboardView = (role) => {
+    switch (role) {
+      case 'DE':
+        return 'deDashboard'
+      case 'FORMATEUR':
+        return 'formateurDashboard'
+      case 'ETUDIANT':
+        return 'etudiantDashboard'
+      default:
+        return 'login'
     }
   }
 
-  const handlePasswordChangeSuccess = (data) => {
+  const handleLoginSuccess = async (data) => {
+    if (data.requiresPasswordChange) {
+      setCurrentView('changePassword')
+    } else {
+      // Utiliser le contexte d'authentification
+      await auth.login(data.token, data.user)
+      
+      // Rediriger vers le bon dashboard
+      const dashboardView = getDashboardView(data.user.role)
+      setCurrentView(dashboardView)
+    }
+  }
+
+  const handlePasswordChangeSuccess = async (data) => {
     console.log('Mot de passe changé avec succès:', data)
     
-    // Sauvegarder les nouvelles données d'authentification
-    saveAuthData(data.token, data.user)
-    setAuthData(data)
-  }
-
-  const handleResetPasswordSuccess = () => {
-    // Rediriger vers la page de succès puis vers login
-    window.location.href = '/reset-success'
-  }
-
-  const handleLogout = () => {
-    clearAuthData()
-    setAuthData(null)
-  }
-
-  const getDashboardComponent = () => {
-    if (!authData || !authData.user) return null
+    // Utiliser le contexte d'authentification
+    await auth.login(data.token, data.user)
     
-    switch (authData.user.role) {
-      case 'DE':
-        return <DEDashboard onLogout={handleLogout} />
-      case 'FORMATEUR':
-        return <FormateurDashboard onLogout={handleLogout} />
-      case 'ETUDIANT':
-        return <EtudiantDashboard onLogout={handleLogout} />
-      default:
-        return null
-    }
+    // Rediriger vers le bon dashboard
+    const dashboardView = getDashboardView(data.user.role)
+    setCurrentView(dashboardView)
   }
 
-  if (loading) {
+  const handleLogout = async () => {
+    await auth.logout()
+    setCurrentView('login')
+  }
+
+  if (currentView === 'loading' || !auth.isInitialized) {
     return (
       <div className="app loading">
         <div className="loading-spinner"></div>
@@ -80,58 +78,43 @@ function App() {
   }
 
   return (
+    <div className="app">
+      <ThemeToggle />
+      <SessionDebug />
+      <MultiTabDemo />
+      
+      {currentView === 'login' && (
+        <Login onLoginSuccess={handleLoginSuccess} />
+      )}
+      
+      {currentView === 'changePassword' && auth.token && (
+        <ChangePassword 
+          token={auth.token} 
+          onPasswordChangeSuccess={handlePasswordChangeSuccess}
+        />
+      )}
+
+      {currentView === 'deDashboard' && (
+        <DEDashboard onLogout={handleLogout} />
+      )}
+
+      {currentView === 'formateurDashboard' && (
+        <FormateurDashboard onLogout={handleLogout} />
+      )}
+
+      {currentView === 'etudiantDashboard' && (
+        <EtudiantDashboard onLogout={handleLogout} />
+      )}
+    </div>
+  )
+}
+
+function App() {
+  return (
     <ThemeProvider>
-      <Router>
-        <div className="app">
-          <ThemeToggle />
-          
-          <Routes>
-            {/* Route de connexion */}
-            <Route 
-              path="/" 
-              element={
-                authData && !authData.requiresPasswordChange ? (
-                  <Navigate to="/dashboard" replace />
-                ) : authData && authData.requiresPasswordChange ? (
-                  <ChangePassword 
-                    token={authData.token} 
-                    onPasswordChangeSuccess={handlePasswordChangeSuccess}
-                  />
-                ) : (
-                  <Login onLoginSuccess={handleLoginSuccess} />
-                )
-              } 
-            />
-            
-            {/* Route de réinitialisation de mot de passe */}
-            <Route 
-              path="/reset-password" 
-              element={<ResetPassword onSuccess={handleResetPasswordSuccess} />} 
-            />
-            
-            {/* Route de succès de réinitialisation */}
-            <Route 
-              path="/reset-success" 
-              element={<ResetPasswordSuccess onBackToLogin={() => window.location.href = '/'} />} 
-            />
-            
-            {/* Route du dashboard */}
-            <Route 
-              path="/dashboard" 
-              element={
-                authData && !authData.requiresPasswordChange ? (
-                  getDashboardComponent()
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
-            />
-            
-            {/* Route par défaut */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </Router>
+      <TabIsolationWrapper>
+        <AppContent />
+      </TabIsolationWrapper>
     </ThemeProvider>
   )
 }
