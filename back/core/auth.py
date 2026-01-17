@@ -159,15 +159,30 @@ security = HTTPBearer()
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    token: Optional[str] = None,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
     db: Session = Depends(get_db)
 ) -> Utilisateur:
-    """Récupère l'utilisateur actuel à partir du token JWT"""
+    """Récupère l'utilisateur actuel à partir du token JWT (Header ou Query Param)"""
     
+    # 1. Récupérer le token (soit du header, soit du paramètre d'URL)
+    jwt_token = None
+    if credentials:
+        jwt_token = credentials.credentials
+    elif token:
+        jwt_token = token
+    
+    if not jwt_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expirée ou jeton manquant. Veuillez vous reconnecter.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # Vérifier et décoder le token
     try:
         from core.jwt import verify_token
-        payload = verify_token(credentials.credentials)
+        payload = verify_token(jwt_token)
         identifiant = payload.get("sub")
         
         if identifiant is None:

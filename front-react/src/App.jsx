@@ -4,27 +4,25 @@ import ChangePassword from './components/ChangePassword'
 import DEDashboard from './components/dashboards/DEDashboard'
 import FormateurDashboard from './components/dashboards/FormateurDashboard'
 import EtudiantDashboard from './components/dashboards/EtudiantDashboard'
-import SessionDebug from './components/debug/SessionDebug'
-import MultiTabDemo from './components/session/MultiTabDemo'
-import TabIsolationWrapper from './components/session/TabIsolationWrapper'
 import { ThemeProvider } from './contexts/ThemeContext'
 import ThemeToggle from './components/common/ThemeToggle'
-import { useAuth } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import './App.css'
 
 function AppContent() {
   const auth = useAuth();
   const [currentView, setCurrentView] = useState('loading')
+  const [tempToken, setTempToken] = useState(null)
 
   useEffect(() => {
     if (auth.isInitialized) {
       if (auth.isAuthenticated) {
         setCurrentView(getDashboardView(auth.user.role))
-      } else {
+      } else if (currentView !== 'changePassword') {
         setCurrentView('login')
       }
     }
-  }, [auth.isInitialized, auth.isAuthenticated, auth.user])
+  }, [auth.isInitialized, auth.isAuthenticated, auth.user, currentView])
 
   const getDashboardView = (role) => {
     switch (role) {
@@ -41,11 +39,12 @@ function AppContent() {
 
   const handleLoginSuccess = async (data) => {
     if (data.requiresPasswordChange) {
+      setTempToken(data.token)
       setCurrentView('changePassword')
     } else {
       // Utiliser le contexte d'authentification
       await auth.login(data.token, data.user)
-      
+
       // Rediriger vers le bon dashboard
       const dashboardView = getDashboardView(data.user.role)
       setCurrentView(dashboardView)
@@ -54,10 +53,11 @@ function AppContent() {
 
   const handlePasswordChangeSuccess = async (data) => {
     console.log('Mot de passe changé avec succès:', data)
-    
+    setTempToken(null)
+
     // Utiliser le contexte d'authentification
     await auth.login(data.token, data.user)
-    
+
     // Rediriger vers le bon dashboard
     const dashboardView = getDashboardView(data.user.role)
     setCurrentView(dashboardView)
@@ -80,16 +80,14 @@ function AppContent() {
   return (
     <div className="app">
       <ThemeToggle />
-      <SessionDebug />
-      <MultiTabDemo />
-      
+
       {currentView === 'login' && (
         <Login onLoginSuccess={handleLoginSuccess} />
       )}
-      
-      {currentView === 'changePassword' && auth.token && (
-        <ChangePassword 
-          token={auth.token} 
+
+      {currentView === 'changePassword' && tempToken && (
+        <ChangePassword
+          token={tempToken}
           onPasswordChangeSuccess={handlePasswordChangeSuccess}
         />
       )}
@@ -112,9 +110,9 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <TabIsolationWrapper>
+      <AuthProvider>
         <AppContent />
-      </TabIsolationWrapper>
+      </AuthProvider>
     </ThemeProvider>
   )
 }

@@ -4,6 +4,7 @@ import {
     Star, MessageSquare, X, Save, Eye
 } from 'lucide-react';
 import { travauxAPI } from '../../services/api';
+import { getAuthToken } from '../../utils/auth';
 import './EvaluerTravail.css';
 
 const EvaluerTravail = ({ travail, onClose, onSuccess, initialAssignationId }) => {
@@ -93,7 +94,7 @@ const EvaluerTravail = ({ travail, onClose, onSuccess, initialAssignationId }) =
         // Évite les problèmes de fermeture de fenêtre causés par IDM
 
         try {
-            const token = sessionStorage.getItem('authToken');
+            const token = getAuthToken();
 
             if (!token) {
                 setError('Session expirée. Veuillez vous reconnecter.');

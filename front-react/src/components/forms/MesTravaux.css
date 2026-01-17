@@ -1,10 +1,12 @@
 /* MesTravaux.css */
 .mes-travaux-container {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding: 3rem;
+    /* Even more padding for high-end look */
+    width: 100%;
+    margin: 0;
     min-height: 100vh;
-    background: var(--background-color);
+    background: var(--bg-color);
+    /* Corrected variable */
 }
 
 .mes-travaux-header {
@@ -105,12 +107,19 @@
 }
 
 .travail-card {
-    background: var(--card-background);
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1.5rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: var(--surface-color);
+    backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    transition: var(--transition-smooth);
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: auto !important;
+    /* Force growth based on content */
+    min-height: min-content;
 }
 
 .travail-card:hover {
@@ -265,8 +274,24 @@
 
 .travail-actions {
     display: flex;
-    gap: 1rem;
+    gap: 1.25rem;
     flex-wrap: wrap;
+    align-items: center;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.status-delivered-notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+    color: #10b981;
+    font-weight: 600;
+    font-size: 0.95rem;
 }
 
 /* Badges */
@@ -352,7 +377,9 @@
 }
 
 /* États */
-.loading-state, .error-state, .empty-state {
+.loading-state,
+.error-state,
+.empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -372,21 +399,29 @@
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
-.error-state svg, .empty-state svg {
+.error-state svg,
+.empty-state svg {
     color: var(--text-secondary);
     margin-bottom: 1rem;
 }
 
-.error-state h3, .empty-state h3 {
+.error-state h3,
+.empty-state h3 {
     color: var(--text-color);
     margin-bottom: 0.5rem;
 }
 
-.error-state p, .empty-state p {
+.error-state p,
+.empty-state p {
     color: var(--text-secondary);
     margin-bottom: 1.5rem;
 }
@@ -396,42 +431,42 @@
     .mes-travaux-container {
         padding: 1rem;
     }
-    
+
     .back-button {
         width: 100%;
         justify-content: center;
         margin-bottom: 1rem;
     }
-    
+
     .header-title {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-    
+
     .travaux-filters {
         flex-direction: column;
     }
-    
+
     .filter-btn {
         text-align: center;
     }
-    
+
     .travail-title {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-    
+
     .travail-meta {
         flex-direction: column;
         gap: 0.5rem;
     }
-    
+
     .travail-actions {
         flex-direction: column;
     }
-    
+
     .btn {
         justify-content: center;
     }
@@ -443,32 +478,32 @@
         background: #064e3b;
         border-color: #065f46;
     }
-    
+
     .note-value {
         color: #34d399;
     }
-    
+
     .note-label {
         color: #a7f3d0;
     }
-    
+
     .feedback strong {
         color: #a7f3d0;
     }
-    
+
     .feedback p {
         color: #6ee7b7;
     }
-    
+
     .commentaire-etudiant {
         background: #1e3a8a;
         border-color: #3b82f6;
     }
-    
+
     .commentaire-etudiant strong {
         color: #93c5fd;
     }
-    
+
     .commentaire-etudiant p {
         color: #bfdbfe;
     }

@@ -124,16 +124,16 @@ async def lister_espaces_pedagogiques(
         result.append({
             "id_espace": espace.id_espace,
             "id_promotion": espace.id_promotion,
-            "id_formateur": espace.id_formateur,  # Ajouter l'ID du formateur
-            "nom_matiere": espace.matiere.nom_matiere,
+            "id_formateur": espace.id_formateur,
+            "nom_matiere": espace.matiere.nom_matiere if espace.matiere else "Inconnu",
             "description": espace.description,
             "code_acces": espace.code_acces,
-            "promotion": espace.promotion.libelle,
-            "filiere": espace.promotion.filiere.nom_filiere,
+            "promotion": espace.promotion.libelle if espace.promotion else "Inconnue",
+            "filiere": espace.promotion.filiere.nom_filiere if (espace.promotion and espace.promotion.filiere) else "Inconnue",
             "formateur": formateur_info,
             "nb_etudiants": nb_etudiants,
             "nb_travaux": 0,
-            "date_creation": espace.date_creation.isoformat()
+            "date_creation": espace.date_creation.isoformat() if espace.date_creation else None
         })
     
     return {"espaces": result, "total": len(result)}

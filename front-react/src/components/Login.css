@@ -3,19 +3,28 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: var(--bg-color);
-  padding: 20px;
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  padding: 24px;
 }
 
 .login-card {
-  background-color: var(--surface-color);
-  padding: 3rem;
-  border-radius: 16px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  padding: 3.5rem 3rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--card-shadow);
   border: 1px solid var(--border-color);
   width: 100%;
-  max-width: 450px;
-  animation: fadeInUp 0.5s ease-out;
+  max-width: 480px;
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: var(--transition-smooth);
+}
+
+.login-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-4px);
 }
 
 [data-theme="light"] .login-card {
@@ -79,169 +88,30 @@
 
 .modern-input {
   width: 100%;
-  padding: 0.75rem 2.75rem 0.75rem 1rem;
+  padding: 0.875rem 1rem 0.875rem 1rem;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 1rem;
-  transition: all 0.2s ease;
-  background-color: var(--bg-color);
+  transition: var(--transition-smooth);
+  background-color: rgba(255, 255, 255, 0.03);
   color: var(--text-primary);
 }
 
-.modern-input::placeholder {
-  color: var(--text-secondary);
+[data-theme="light"] .modern-input {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .modern-input:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-}
-
-.input-icon {
-  position: absolute;
-  left: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
-  pointer-events: none;
-  display: flex;
-}
-
-.input-icon-right {
-  position: absolute;
-  right: 0.85rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
-  pointer-events: none;
-  display: flex;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: color 0.2s ease;
-  display: flex;
-}
-
-.password-toggle:hover {
-  color: var(--text-primary);
-}
-
-.form-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0.25rem 0;
-}
-
-.checkbox-wrapper {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-}
-
-.checkbox-wrapper input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin-right: 8px;
-  accent-color: var(--accent-color);
-  cursor: pointer;
-}
-
-.forgot-password {
-  color: var(--accent-color);
-  text-decoration: none;
-  font-size: 0.875rem;
-  transition: color 0.2s ease;
-  font-weight: 500;
-}
-
-.forgot-password:hover {
-  color: var(--accent-hover);
-  text-decoration: underline;
-}
-
-.login-button {
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  padding: 0.875rem;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 0.5rem;
-}
-
-.login-button:hover:not(:disabled) {
-  background-color: var(--accent-hover);
-  transform: translateY(-1px);
-}
-
-.login-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.login-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.loading-spinner {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.loading-spinner svg {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.error-message {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid var(--error-color);
-  color: var(--error-color);
-  padding: 0.75rem;
-  border-radius: 8px;
-  text-align: center;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  animation: slideDown 0.3s ease;
-}
-
-[data-theme="light"] .error-message {
-  background-color: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
+  background-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
 
   to {
@@ -265,57 +135,56 @@
 /* Bouton profil fixe pour les dashboards */
 .profile-button {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: 24px;
+  right: 24px;
   z-index: 1000;
   background-color: var(--accent-color);
   color: white;
   border: none;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-size: 1.2rem;
+  transition: var(--transition-smooth);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  font-size: 1.25rem;
   font-weight: 600;
 }
 
 .profile-button:hover {
   background-color: var(--accent-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 12px 20px rgba(99, 102, 241, 0.3);
 }
 
-/* Bouton thème flottant pour les dashboards */
 .theme-button {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 100;
-  background-color: var(--surface-color);
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 1000;
+  background: var(--surface-color);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  font-size: 1.2rem;
+  transition: var(--transition-smooth);
+  box-shadow: var(--card-shadow);
 }
 
 .theme-button:hover {
-  background-color: var(--accent-color);
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  background: var(--surface-hover);
+  transform: translateY(-2px) rotate(15deg);
+  border-color: var(--accent-color);
 }
 
 @media (max-width: 480px) {

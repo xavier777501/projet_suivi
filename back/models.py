@@ -208,25 +208,23 @@ class Assignation(Base):
     id_groupe = Column(String(100), ForeignKey("groupe_etudiant.id_groupe"), nullable=True)
     date_assignment = Column(DateTime, nullable=False, default=datetime.utcnow)
     statut = Column(SAEnum(StatutAssignationEnum), nullable=False, default=StatutAssignationEnum.ASSIGNE)
+    
+    # Champs de soumission (US 4)
+    date_soumission = Column(DateTime, nullable=True)
+    commentaire_etudiant = Column(Text, nullable=True)
+    fichier_path = Column(String(255), nullable=True)
+    
+    # Champs d'évaluation (US 6)
+    date_evaluation = Column(DateTime, nullable=True)
+    note = Column(Numeric(3, 1), nullable=True)
+    commentaire_formateur = Column(Text, nullable=True)
 
     etudiant = relationship("Etudiant", back_populates="assignations")
     travail = relationship("Travail", back_populates="assignations")
     groupe = relationship("GroupeEtudiant", back_populates="assignations")
-    livraisons = relationship("Livraison", back_populates="assignation")
 
 
-class Livraison(Base):
-    __tablename__ = "livraison"
 
-    id_livraison = Column(String(100), primary_key=True, nullable=False)
-    id_assignation = Column(String(100), ForeignKey("assignation.id_assignation"), nullable=False)
-    chemin_fichier = Column(String(255), nullable=False)
-    date_livraison = Column(DateTime, nullable=False, default=datetime.utcnow)
-    commentaire = Column(Text, nullable=True)
-    note_attribuee = Column(Numeric(3, 1), nullable=True)
-    feedback = Column(Text, nullable=True)
-
-    assignation = relationship("Assignation", back_populates="livraisons")
 
 
 class TentativeConnexion(Base):

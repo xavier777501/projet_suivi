@@ -67,7 +67,7 @@ const DEDashboard = ({ onLogout }) => {
                     try {
                         const promotionsRes = await gestionComptesAPI.getPromotions();
                         const promotions = promotionsRes.data.promotions || [];
-                        
+
                         let allEtudiants = [];
                         for (const promotion of promotions) {
                             try {
@@ -808,7 +808,8 @@ const DEDashboard = ({ onLogout }) => {
     return (
         <div className="dashboard-container">
             {/* Header avec navigation */}
-            <header className="dashboard-header">
+            {/* Header avec navigation */}
+            <header className="dashboard-header animate-fade-in">
                 <div className="header-content">
                     <div className="header-title">
                         <div className="header-logo-container">
@@ -824,9 +825,9 @@ const DEDashboard = ({ onLogout }) => {
                         </div>
                     </div>
                     <div className="header-actions">
-                        <button onClick={onLogout} className="btn btn-danger">
-                            <LogOut size={16} />
-                            Déconnexion
+                        <button onClick={onLogout} className="logout-glass-btn">
+                            <LogOut size={18} />
+                            <span>Déconnexion</span>
                         </button>
                     </div>
                 </div>
@@ -943,7 +944,7 @@ const DEDashboard = ({ onLogout }) => {
             )}
 
             {/* Bouton d'accès rapide flottant */}
-            <QuickAccessFab 
+            <QuickAccessFab
                 onAction={handleQuickAction}
                 userRole="DE"
             />

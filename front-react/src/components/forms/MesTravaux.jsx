@@ -245,14 +245,19 @@ const MesTravaux = ({ onBack }) => {
                             </div>
 
                             <div className="travail-actions">
-                                {(assignation.statut === 'ASSIGNE' || assignation.statut === 'EN_COURS') && (
+                                {assignation.statut !== 'RENDU' && assignation.statut !== 'NOTE' ? (
                                     <button
-                                        className="btn btn-primary"
+                                        className="btn btn-primary btn-lg"
                                         onClick={() => setSelectedAssignation(assignation)}
                                     >
-                                        <Upload size={16} />
-                                        Rendre le travail
+                                        <Upload size={20} />
+                                        Rendre mon travail
                                     </button>
+                                ) : (
+                                    <div className="status-delivered-notice">
+                                        <CheckCircle size={18} />
+                                        <span>Travail déjà rendu</span>
+                                    </div>
                                 )}
 
                                 {assignation.livraison?.date_livraison && assignation.livraison?.chemin_fichier && (
@@ -261,7 +266,7 @@ const MesTravaux = ({ onBack }) => {
                                         onClick={() => handleDownloadFile(assignation.livraison.id_livraison)}
                                     >
                                         <Download size={16} />
-                                        Télécharger ma copie
+                                        Consulter ma copie
                                     </button>
                                 )}
 
