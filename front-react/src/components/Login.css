@@ -194,9 +194,11 @@
   }
 
   .form-options {
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
   }
 
   .profile-button,
