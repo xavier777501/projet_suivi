@@ -194,6 +194,111 @@ async def lister_travaux_espace(
     travaux = db.query(Travail).filter(Travail.id_espace == id_espace).order_by(Travail.date_creation.desc()).all()
     return travaux
 
+
+@router.get("/mes-assignations", response_model=List[AssignationResponse])
+async def lister_mes_assignations(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """
+    Lister toutes les assignations effectuées par le formateur connecté.
+    """
+    if current_user.role != RoleEnum.FORMATEUR:
+        raise HTTPException(status_code=403, detail="Accès réservé aux formateurs")
+    
+    formateur = db.query(Formateur).filter(Formateur.identifiant == current_user.identifiant).first()
+    if not formateur:
+        raise HTTPException(status_code=404, detail="Profil formateur non trouvé")
+
+    # Récupérer les assignations pour les espaces du formateur
+    assignations = db.query(
+        Assignation.id_assignation,
+        Travail.titre.label("titre_travail"),
+        Matiere.nom_matiere,
+        Utilisateur.nom.label("nom_etudiant"),
+        Utilisateur.prenom.label("prenom_etudiant"),
+        Assignation.date_assignment,
+        Travail.date_echeance,
+        Assignation.statut,
+        Travail.type_travail
+    ).join(
+        Travail, Assignation.id_travail == Travail.id_travail
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).join(
+        Etudiant, Assignation.id_etudiant == Etudiant.id_etudiant
+    ).join(
+        Utilisateur, Etudiant.identifiant == Utilisateur.identifiant
+    ).filter(
+        EspacePedagogique.id_formateur == formateur.id_formateur
+    ).order_by(Assignation.date_assignment.desc()).all()
+
+    return assignations
+
+@router.get("/mes-travaux", response_model=List[MesTravauxResponse])
+async def lister_mes_travaux(
+    db: Session = Depends(get_db),
+    current_user: Utilisateur = Depends(get_current_user)
+):
+    """
+    Lister tous les travaux assignés à l'étudiant connecté.
+    """
+    if current_user.role != RoleEnum.ETUDIANT:
+        raise HTTPException(status_code=403, detail="Accès réservé aux étudiants")
+    
+    etudiant = db.query(Etudiant).filter(Etudiant.identifiant == current_user.identifiant).first()
+    if not etudiant:
+        raise HTTPException(status_code=404, detail="Profil étudiant non trouvé")
+
+    # Récupérer les assignations de l'étudiant avec les détails du travail (avec joins pour l'intégrité)
+    assignations = db.query(Assignation).join(
+        Travail, Assignation.id_travail == Travail.id_travail
+    ).join(
+        EspacePedagogique, Travail.id_espace == EspacePedagogique.id_espace
+    ).join(
+        Matiere, EspacePedagogique.id_matiere == Matiere.id_matiere
+    ).filter(
+        Assignation.id_etudiant == etudiant.id_etudiant
+    ).order_by(Assignation.date_assignment.desc()).all()
+    
+    resultats = []
+    for assignation in assignations:
+            
+        # Récupérer la livraison si elle existe
+        livraison = db.query(Livraison).filter(
+            Livraison.id_assignation == assignation.id_assignation
+        ).first()
+
+        livraison_data = None
+        if livraison:
+            livraison_data = LivraisonEtudiantResponse(
+                id_livraison=livraison.id_livraison,
+                id_assignation=livraison.id_assignation,
+                chemin_fichier=livraison.chemin_fichier,
+                date_livraison=livraison.date_livraison,
+                commentaire=livraison.commentaire
+            )
+
+        travail_data = MesTravauxResponse(
+            id_assignation=assignation.id_assignation,
+            id_travail=assignation.travail.id_travail,
+            titre_travail=assignation.travail.titre,
+            description=assignation.travail.description,
+            nom_matiere=assignation.travail.espace_pedagogique.matiere.nom_matiere,
+            date_assignment=assignation.date_assignment,
+            date_echeance=assignation.travail.date_echeance,
+            statut=assignation.statut,
+            type_travail=assignation.travail.type_travail,
+            note_max=assignation.travail.note_max,
+            livraison=livraison_data
+        )
+        resultats.append(travail_data)
+
+    return resultats
+
+
 @router.get("/{id_travail}", response_model=TravailResponse)
 async def obtenir_details_travail(
     id_travail: str,
@@ -235,8 +340,7 @@ async def assigner_travail(
     if travail.type_travail == TypeTravailEnum.INDIVIDUEL and len(data.etudiants_ids) > 1:
         raise HTTPException(status_code=400, detail="Un travail individuel ne peut être assigné qu'à un seul étudiant")
 
-    # Si une nouvelle date d'échéance est fournie, on peut mettre à jour le travail ou l'utiliser pour l'email
-    # Ici on va simplement l'utiliser pour l'email et éventuellement mettre à jour le travail si besoin
+    # Si une nouvelle date d'échéance est fournie
     if data.date_echeance:
         travail.date_echeance = data.date_echeance
         db.add(travail)
@@ -250,33 +354,41 @@ async def assigner_travail(
         ).first()
 
         if existe:
-            continue
-
-        # Créer l'assignation
-        id_assignation = generer_identifiant_unique("ASG")
-        nouvelle_assignation = Assignation(
-            id_assignation=id_assignation,
-            id_travail=data.id_travail,
-            id_etudiant=id_etudiant,
-            date_assignment=datetime.utcnow(),
-            statut=StatutAssignationEnum.ASSIGNE
-        )
-        db.add(nouvelle_assignation)
+            # Si assignation existe déjà, on réinitialise le statut à ASSIGNE
+            existe.statut = StatutAssignationEnum.ASSIGNE
+            existe.date_assignment = datetime.utcnow()
+            db.add(existe)
+        else:
+            # Créer l'assignation
+            id_assignation = generer_identifiant_unique("ASG")
+            nouvelle_assignation = Assignation(
+                id_assignation=id_assignation,
+                id_travail=data.id_travail,
+                id_etudiant=id_etudiant,
+                date_assignment=datetime.utcnow(),
+                statut=StatutAssignationEnum.ASSIGNE
+            )
+            db.add(nouvelle_assignation)
         
         # Récupérer les infos de l'étudiant pour l'email
         etudiant = db.query(Etudiant).filter(Etudiant.id_etudiant == id_etudiant).first()
         if etudiant and etudiant.utilisateur:
-            # Envoi de l'email en tâche de fond
-            background_tasks.add_task(
-                email_service.envoyer_email_assignation_travail,
-                destinataire=etudiant.utilisateur.email,
-                prenom=etudiant.utilisateur.prenom,
-                titre_travail=travail.titre,
-                nom_matiere=travail.espace_pedagogique.matiere.nom_matiere,
-                formateur=f"{current_user.prenom} {current_user.nom}",
-                date_echeance=travail.date_echeance.strftime("%d/%m/%Y à %H:%M"),
-                description=travail.description
-            )
+            try:
+                # Envoi de l'email en tâche de fond
+                date_echeance_str = travail.date_echeance.strftime("%d/%m/%Y à %H:%M") if travail.date_echeance else "Non définie"
+                background_tasks.add_task(
+                    email_service.envoyer_email_assignation_travail,
+                    destinataire=etudiant.utilisateur.email,
+                    prenom=etudiant.utilisateur.prenom,
+                    titre_travail=travail.titre,
+                    nom_matiere=travail.espace_pedagogique.matiere.nom_matiere,
+                    formateur=f"{current_user.prenom} {current_user.nom}",
+                    date_echeance=date_echeance_str,
+                    description=travail.description
+                )
+            except Exception as e:
+                # Log erreur email silencieusement ou via logger standard si configuré
+                pass
         
         resultats.append(id_etudiant)
 

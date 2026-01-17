@@ -12,7 +12,6 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        console.log('AssignerTravail - travail reçu:', travail);
         loadEtudiants();
         // Initialiser avec la date d'échéance du travail
         if (travail.date_echeance) {
@@ -52,7 +51,7 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
         if (travail.type_travail === 'INDIVIDUEL') {
             return; // Pas de sélection multiple pour les travaux individuels
         }
-        
+
         if (selectedEtudiants.length === etudiants.length) {
             setSelectedEtudiants([]);
         } else {
@@ -62,7 +61,7 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (selectedEtudiants.length === 0) {
             setError('Veuillez sélectionner au moins un étudiant');
             return;
@@ -95,6 +94,7 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
             };
 
             await travauxAPI.assignerTravail(assignationData);
+
             onSuccess(`Travail assigné avec succès à ${selectedEtudiants.length} étudiant(s) !`);
             onClose();
         } catch (err) {
@@ -162,7 +162,7 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
                                 <span>{travail.note_max}</span>
                             </div>
                         </div>
-                        
+
                         <div className="description-section">
                             <h4>Description:</h4>
                             <p>{travail.description}</p>
@@ -195,7 +195,7 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
                         <div className="form-group">
                             <div className="etudiants-header">
                                 <label>
-                                    Étudiants à assigner * 
+                                    Étudiants à assigner *
                                     {travail.type_travail === 'INDIVIDUEL' && (
                                         <span className="type-info">(Un seul étudiant pour un travail individuel)</span>
                                     )}
@@ -210,11 +210,11 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
                                     </button>
                                 )}
                             </div>
-                            
+
                             {etudiants.length > 0 ? (
                                 <div className="etudiants-list">
                                     {etudiants.map((etudiant) => (
-                                        <div 
+                                        <div
                                             key={etudiant.id_etudiant}
                                             className={`etudiant-item ${selectedEtudiants.includes(etudiant.id_etudiant) ? 'selected' : ''}`}
                                             onClick={() => handleEtudiantToggle(etudiant.id_etudiant)}
@@ -264,17 +264,17 @@ const AssignerTravail = ({ travail, onClose, onSuccess }) => {
 
                         {/* Boutons d'action */}
                         <div className="modal-actions">
-                            <button 
-                                type="button" 
-                                className="btn btn-secondary" 
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
                                 onClick={onClose}
                                 disabled={assigning}
                             >
                                 Annuler
                             </button>
-                            <button 
-                                type="submit" 
-                                className="btn btn-primary" 
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
                                 disabled={assigning || selectedEtudiants.length === 0}
                             >
                                 {assigning ? (
