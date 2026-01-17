@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -41,3 +41,34 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def executer_migrations(engine):
+    """
+    Vérifie et ajoute les colonnes manquantes à la table 'assignation' (Migrations automatiques)
+    """
+    print("🔄 Vérification des migrations de la base de données...")
+    
+    columns_to_add = [
+        ("date_soumission", "DATETIME NULL"),
+        ("commentaire_etudiant", "TEXT NULL"),
+        ("fichier_path", "VARCHAR(255) NULL"),
+        ("date_evaluation", "DATETIME NULL"),
+        ("note", "NUMERIC(3, 1) NULL"),
+        ("commentaire_formateur", "TEXT NULL")
+    ]
+    
+    with engine.connect() as conn:
+        for col_name, col_def in columns_to_add:
+            try:
+                # Vérifier si la colonne existe (syntaxe compatible MySQL/TiDB)
+                result = conn.execute(text(f"SHOW COLUMNS FROM assignation LIKE '{col_name}'"))
+                if not result.fetchone():
+                    print(f"➕ Ajout de la colonne '{col_name}' à la table 'assignation'...")
+                    conn.execute(text(f"ALTER TABLE assignation ADD COLUMN {col_name} {col_def}"))
+                    conn.commit()
+                else:
+                    print(f"✅ La colonne '{col_name}' existe déjà.")
+            except Exception as e:
+                print(f"⚠️ Erreur lors de l'ajout de '{col_name}': {e}")
+    
+    print("✨ Migrations terminées.")

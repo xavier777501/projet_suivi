@@ -5,13 +5,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from database.database import Base, engine, SessionLocal
+from database.database import Base, engine, SessionLocal, executer_migrations
 import models  # ensure all models are imported so tables are created
 from routes import auth
 # # from routes import gestion_comptes
 from core.auth import initialiser_compte_de
 
-# Créer les tables
+# Exécuter les migrations avant l'initialisation des données
+executer_migrations(engine)
+
+# Créer les tables (si elles n'existent pas du tout)
 Base.metadata.create_all(bind=engine)
 
 # Initialiser le compte DE au démarrage
