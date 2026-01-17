@@ -33,7 +33,6 @@ const MesTravaux = ({ onBack }) => {
     };
 
     const handleLivrerSuccess = (message) => {
-        console.log(message);
         loadMesAssignations(); // Recharger les données
         setSelectedAssignation(null);
     };
@@ -72,6 +71,8 @@ const MesTravaux = ({ onBack }) => {
     const getStatutBadge = (assignation) => {
         if (assignation.livraison?.date_livraison) {
             return <span className="badge badge-warning"><Clock size={14} /> Rendu</span>;
+        } else if (assignation.statut === 'ASSIGNE') {
+            return <span className="badge badge-info"><Clock size={14} /> Assigné</span>;
         } else if (new Date(assignation.date_echeance) < new Date()) {
             return <span className="badge badge-danger"><AlertCircle size={14} /> En retard</span>;
         } else {
@@ -88,11 +89,11 @@ const MesTravaux = ({ onBack }) => {
     const filteredAssignations = assignations.filter(assignation => {
         switch (activeFilter) {
             case 'en_cours':
-                return !assignation.livraison?.date_livraison && new Date(assignation.date_echeance) >= new Date();
+                return assignation.statut === 'ASSIGNE' || assignation.statut === 'EN_COURS';
             case 'rendus':
-                return assignation.livraison?.date_livraison && (assignation.livraison?.note_attribuee === null || assignation.livraison?.note_attribuee === undefined);
+                return assignation.statut === 'RENDU';
             case 'notes':
-                return assignation.livraison?.note_attribuee !== null && assignation.livraison?.note_attribuee !== undefined;
+                return assignation.statut === 'NOTE';
             default:
                 return true;
         }
@@ -102,11 +103,11 @@ const MesTravaux = ({ onBack }) => {
         return assignations.filter(assignation => {
             switch (filter) {
                 case 'en_cours':
-                    return !assignation.livraison?.date_livraison && new Date(assignation.date_echeance) >= new Date();
+                    return assignation.statut === 'ASSIGNE' || assignation.statut === 'EN_COURS';
                 case 'rendus':
-                    return assignation.livraison?.date_livraison && (assignation.livraison?.note_attribuee === null || assignation.livraison?.note_attribuee === undefined);
+                    return assignation.statut === 'RENDU';
                 case 'notes':
-                    return assignation.livraison?.note_attribuee !== null && assignation.livraison?.note_attribuee !== undefined;
+                    return assignation.statut === 'NOTE';
                 default:
                     return true;
             }
@@ -244,7 +245,7 @@ const MesTravaux = ({ onBack }) => {
                             </div>
 
                             <div className="travail-actions">
-                                {!assignation.livraison?.date_livraison && new Date(assignation.date_echeance) >= new Date() && (
+                                {(assignation.statut === 'ASSIGNE' || assignation.statut === 'EN_COURS') && (
                                     <button
                                         className="btn btn-primary"
                                         onClick={() => setSelectedAssignation(assignation)}

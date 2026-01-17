@@ -312,13 +312,14 @@ async def consulter_statistiques_espace(
             assignations = db.query(Assignation).filter(Assignation.id_travail == travail.id_travail).all()
             
             assignations_travail = {
+                "total": len(assignations),
                 "assignees": len([a for a in assignations if a.statut == StatutAssignationEnum.ASSIGNE]),
                 "en_cours": len([a for a in assignations if a.statut == StatutAssignationEnum.EN_COURS]),
                 "rendues": len([a for a in assignations if a.statut == StatutAssignationEnum.RENDU]),
                 "notees": len([a for a in assignations if a.statut == StatutAssignationEnum.NOTE])
             }
             
-            assignations_stats["total"] += len(assignations)
+            assignations_stats["total"] += assignations_travail["total"]
             assignations_stats["assignees"] += assignations_travail["assignees"]
             assignations_stats["en_cours"] += assignations_travail["en_cours"]
             assignations_stats["rendues"] += assignations_travail["rendues"]

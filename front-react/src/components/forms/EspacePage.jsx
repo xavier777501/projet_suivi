@@ -13,7 +13,7 @@ import './EspacePage.css';
 
 const EspacePage = ({ espace, onBack }) => {
     console.log('EspacePage - espace reçu:', espace); // Debug
-    
+
     const [activeTab, setActiveTab] = useState('general');
     const [statistiques, setStatistiques] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ const EspacePage = ({ espace, onBack }) => {
                     </div>
                 </div>
                 <div className="espace-actions">
-                    <button 
+                    <button
                         className="btn btn-primary"
                         onClick={() => setActiveModal('create-travail')}
                     >
@@ -255,7 +255,7 @@ const EspacePage = ({ espace, onBack }) => {
         <div className="tab-content animate-fade-in">
             <div className="section-header">
                 <h3><FileText size={20} /> Travaux ({travaux.length})</h3>
-                <button 
+                <button
                     className="btn btn-primary"
                     onClick={() => setActiveModal('create-travail')}
                 >
@@ -276,8 +276,8 @@ const EspacePage = ({ espace, onBack }) => {
                                     </span>
                                 </div>
                                 <div className="travail-actions-top">
-                                    <button 
-                                        className="btn-icon" 
+                                    <button
+                                        className="btn-icon"
                                         title="Modifier"
                                         onClick={() => {
                                             setSelectedTravail(travail);
@@ -296,7 +296,7 @@ const EspacePage = ({ espace, onBack }) => {
                                         <span><Clock size={14} /> Échéance: {new Date(travail.date_echeance).toLocaleDateString('fr-FR')}</span>
                                     )}
                                 </div>
-                                
+
                                 <div className="travail-stats-mini">
                                     <div className="stat-mini">
                                         <span className="stat-value">{travail.assignations.assignees}</span>
@@ -314,19 +314,19 @@ const EspacePage = ({ espace, onBack }) => {
 
                                 <div className="travail-progress">
                                     <div className="progress-info">
-                                        <span>Progression: {travail.assignations.rendues}/{travail.assignations.assignees || 1}</span>
-                                        <span>{Math.round((travail.assignations.rendues / (travail.assignations.assignees || 1)) * 100)}%</span>
+                                        <span>Progression: {(travail.assignations.rendues || 0) + (travail.assignations.notees || 0)}/{travail.assignations.total || 0}</span>
+                                        <span>{travail.assignations.total > 0 ? Math.round((((travail.assignations.rendues || 0) + (travail.assignations.notees || 0)) / travail.assignations.total) * 100) : 0}%</span>
                                     </div>
                                     <div className="progress-bar">
-                                        <div 
+                                        <div
                                             className="progress-fill"
-                                            style={{ width: `${Math.round((travail.assignations.rendues / (travail.assignations.assignees || 1)) * 100)}%` }}
+                                            style={{ width: `${travail.assignations.total > 0 ? Math.round((((travail.assignations.rendues || 0) + (travail.assignations.notees || 0)) / travail.assignations.total) * 100) : 0}%` }}
                                         ></div>
                                     </div>
                                 </div>
                             </div>
                             <div className="travail-footer-actions">
-                                <button 
+                                <button
                                     className="btn btn-assign"
                                     onClick={() => {
                                         setSelectedTravail(travail);
@@ -337,7 +337,7 @@ const EspacePage = ({ espace, onBack }) => {
                                     Assigner
                                 </button>
                                 {travail.assignations.rendues > 0 && (
-                                    <button 
+                                    <button
                                         className="btn btn-evaluate pulse-animation"
                                         onClick={() => {
                                             setSelectedTravail(travail);
@@ -357,7 +357,7 @@ const EspacePage = ({ espace, onBack }) => {
                     <FileText size={64} opacity={0.3} />
                     <h3>Aucun travail créé</h3>
                     <p>Vous n'avez pas encore créé de travaux pour cet espace.</p>
-                    <button 
+                    <button
                         className="btn btn-primary"
                         onClick={() => setActiveModal('create-travail')}
                     >
@@ -392,21 +392,21 @@ const EspacePage = ({ espace, onBack }) => {
 
             {/* Navigation par onglets */}
             <div className="tabs-navigation">
-                <button 
+                <button
                     className={`tab-button ${activeTab === 'general' ? 'active' : ''}`}
                     onClick={() => setActiveTab('general')}
                 >
                     <BarChart3 size={16} />
                     Général
                 </button>
-                <button 
+                <button
                     className={`tab-button ${activeTab === 'etudiants' ? 'active' : ''}`}
                     onClick={() => setActiveTab('etudiants')}
                 >
                     <Users size={16} />
                     Étudiants ({etudiants.length})
                 </button>
-                <button 
+                <button
                     className={`tab-button ${activeTab === 'travaux' ? 'active' : ''}`}
                     onClick={() => setActiveTab('travaux')}
                 >
@@ -427,7 +427,7 @@ const EspacePage = ({ espace, onBack }) => {
 
             {/* Modals */}
             {activeModal === 'create-travail' && (
-                <CreateTravail 
+                <CreateTravail
                     spaces={[espace]}
                     initialSpaceId={espace.id_espace}
                     onClose={() => setActiveModal(null)}
@@ -436,7 +436,7 @@ const EspacePage = ({ espace, onBack }) => {
             )}
 
             {activeModal === 'evaluer-travail' && selectedTravail && (
-                <EvaluerTravail 
+                <EvaluerTravail
                     travail={selectedTravail}
                     onClose={() => {
                         setActiveModal(null);
@@ -447,7 +447,7 @@ const EspacePage = ({ espace, onBack }) => {
             )}
 
             {activeModal === 'assigner-travail' && selectedTravail && (
-                <AssignerTravail 
+                <AssignerTravail
                     travail={selectedTravail}
                     onClose={() => {
                         setActiveModal(null);
