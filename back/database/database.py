@@ -71,4 +71,30 @@ def executer_migrations(engine):
             except Exception as e:
                 print(f"⚠️ Erreur lors de l'ajout de '{col_name}': {e}")
     
-    print("✨ Migrations terminées.")
+    print("✨ Migrations des colonnes terminées.")
+
+    # Migration pour les INDEX (pour la performance)
+    print("🔄 Vérification des index de performance...")
+    indexes_to_add = [
+        ("utilisateur", "email", "idx_utilisateur_email"),
+        ("etudiant", "id_promotion", "idx_etudiant_promotion"),
+        ("etudiant", "statut", "idx_etudiant_statut"),
+        ("assignation", "statut", "idx_assignation_statut"),
+        ("espace_pedagogique", "id_formateur", "idx_espace_formateur")
+    ]
+
+    with engine.connect() as conn:
+        for table, column, index_name in indexes_to_add:
+            try:
+                # Vérifier si l'index existe déjà
+                result = conn.execute(text(f"SHOW INDEX FROM {table} WHERE Key_name = '{index_name}'"))
+                if not result.fetchone():
+                    print(f"➕ Création de l'index '{index_name}' sur {table}({column})...")
+                    conn.execute(text(f"CREATE INDEX {index_name} ON {table}({column})"))
+                    conn.commit()
+                else:
+                    print(f"✅ L'index '{index_name}' existe déjà.")
+            except Exception as e:
+                print(f"⚠️ Erreur lors de la création de l'index '{index_name}': {e}")
+    
+    print("🚀 Toutes les optimisations de base de données sont appliquées.")

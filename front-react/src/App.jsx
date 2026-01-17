@@ -1,13 +1,20 @@
-import { useState, useEffect } from 'react'
-import Login from './components/Login'
-import ChangePassword from './components/ChangePassword'
-import DEDashboard from './components/dashboards/DEDashboard'
-import FormateurDashboard from './components/dashboards/FormateurDashboard'
-import EtudiantDashboard from './components/dashboards/EtudiantDashboard'
+import { useState, useEffect, lazy, Suspense } from 'react'
+const Login = lazy(() => import('./components/Login'))
+const ChangePassword = lazy(() => import('./components/ChangePassword'))
+const DEDashboard = lazy(() => import('./components/dashboards/DEDashboard'))
+const FormateurDashboard = lazy(() => import('./components/dashboards/FormateurDashboard'))
+const EtudiantDashboard = lazy(() => import('./components/dashboards/EtudiantDashboard'))
 import { ThemeProvider } from './contexts/ThemeContext'
 import ThemeToggle from './components/common/ThemeToggle'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import './App.css'
+
+const LoadingScreen = () => (
+  <div className="app loading">
+    <div className="loading-spinner"></div>
+    <p>Chargement en cours...</p>
+  </div>
+);
 
 function AppContent() {
   const auth = useAuth();
@@ -80,29 +87,30 @@ function AppContent() {
   return (
     <div className="app">
       <ThemeToggle />
+      <Suspense fallback={<LoadingScreen />}>
+        {currentView === 'login' && (
+          <Login onLoginSuccess={handleLoginSuccess} />
+        )}
 
-      {currentView === 'login' && (
-        <Login onLoginSuccess={handleLoginSuccess} />
-      )}
+        {currentView === 'changePassword' && tempToken && (
+          <ChangePassword
+            token={tempToken}
+            onPasswordChangeSuccess={handlePasswordChangeSuccess}
+          />
+        )}
 
-      {currentView === 'changePassword' && tempToken && (
-        <ChangePassword
-          token={tempToken}
-          onPasswordChangeSuccess={handlePasswordChangeSuccess}
-        />
-      )}
+        {currentView === 'deDashboard' && (
+          <DEDashboard onLogout={handleLogout} />
+        )}
 
-      {currentView === 'deDashboard' && (
-        <DEDashboard onLogout={handleLogout} />
-      )}
+        {currentView === 'formateurDashboard' && (
+          <FormateurDashboard onLogout={handleLogout} />
+        )}
 
-      {currentView === 'formateurDashboard' && (
-        <FormateurDashboard onLogout={handleLogout} />
-      )}
-
-      {currentView === 'etudiantDashboard' && (
-        <EtudiantDashboard onLogout={handleLogout} />
-      )}
+        {currentView === 'etudiantDashboard' && (
+          <EtudiantDashboard onLogout={handleLogout} />
+        )}
+      </Suspense>
     </div>
   )
 }

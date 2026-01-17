@@ -116,9 +116,9 @@ class Etudiant(Base):
     id_etudiant = Column(String(100), primary_key=True, nullable=False)
     identifiant = Column(String(100), ForeignKey("utilisateur.identifiant"), unique=True, nullable=False)
     matricule = Column(String(100), unique=True, nullable=False)
-    id_promotion = Column(String(100), ForeignKey("promotion.id_promotion"), nullable=False)
+    id_promotion = Column(String(100), ForeignKey("promotion.id_promotion"), nullable=False, index=True)
     date_inscription = Column(Date, nullable=False)
-    statut = Column(SAEnum(StatutEtudiantEnum), nullable=False, default=StatutEtudiantEnum.ACTIF)
+    statut = Column(SAEnum(StatutEtudiantEnum), nullable=False, default=StatutEtudiantEnum.ACTIF, index=True)
 
     utilisateur = relationship("Utilisateur", back_populates="etudiant")
     promotion = relationship("Promotion", back_populates="etudiants")
@@ -147,7 +147,7 @@ class EspacePedagogique(Base):
     id_matiere = Column(String(100), ForeignKey("matiere.id_matiere"), nullable=False)
     description = Column(Text, nullable=True)
     date_creation = Column(DateTime, nullable=False, default=datetime.utcnow)
-    id_formateur = Column(String(100), ForeignKey("formateur.id_formateur"), nullable=True)
+    id_formateur = Column(String(100), ForeignKey("formateur.id_formateur"), nullable=True, index=True)
     code_acces = Column(String(100), nullable=True)
 
     promotion = relationship("Promotion", back_populates="espaces_pedagogiques")
@@ -207,7 +207,7 @@ class Assignation(Base):
     id_travail = Column(String(100), ForeignKey("travail.id_travail"), nullable=False)
     id_groupe = Column(String(100), ForeignKey("groupe_etudiant.id_groupe"), nullable=True)
     date_assignment = Column(DateTime, nullable=False, default=datetime.utcnow)
-    statut = Column(SAEnum(StatutAssignationEnum), nullable=False, default=StatutAssignationEnum.ASSIGNE)
+    statut = Column(SAEnum(StatutAssignationEnum), nullable=False, default=StatutAssignationEnum.ASSIGNE, index=True)
     
     # Champs de soumission (US 4)
     date_soumission = Column(DateTime, nullable=True)

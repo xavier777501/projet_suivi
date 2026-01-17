@@ -1,6 +1,7 @@
 from datetime import date
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -89,7 +90,14 @@ def initialiser_systeme():
 # Lancer l'initialisation
 initialiser_systeme()
 
-app = FastAPI()
+app = FastAPI(
+    title="Système de Suivi de Projets",
+    description="API pour la gestion et le suivi des projets étudiants",
+    version="1.0.0"
+)
+
+# Middleware de compression pour des réponses plus rapides
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Configuration CORS robuste
 origins = [
