@@ -11,7 +11,7 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
   const [selectedFormateur, setSelectedFormateur] = useState(espace.id_formateur || '');
   const [selectedEtudiants, setSelectedEtudiants] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState(null);
@@ -29,9 +29,9 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
       const filtered = etudiants.filter(etudiant => {
         const fullName = `${etudiant.prenom} ${etudiant.nom}`.toLowerCase();
         const searchLower = searchTerm.toLowerCase();
-        return fullName.includes(searchLower) || 
-               etudiant.email.toLowerCase().includes(searchLower) ||
-               (etudiant.matricule && etudiant.matricule.toLowerCase().includes(searchLower));
+        return fullName.includes(searchLower) ||
+          etudiant.email.toLowerCase().includes(searchLower) ||
+          (etudiant.matricule && etudiant.matricule.toLowerCase().includes(searchLower));
       });
       setFilteredEtudiants(filtered);
     }
@@ -47,7 +47,7 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
 
       setFormateurs(formateursRes.data.formateurs || []);
       setEtudiants(etudiantsRes.data.etudiants || []);
-      
+
       // Récupérer aussi les étudiants déjà inscrits dans cet espace
       try {
         const statistiquesRes = await espacesPedagogiquesAPI.consulterStatistiques(espace.id_espace);
@@ -62,6 +62,14 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
     } finally {
       setLoadingData(false);
     }
+  };
+
+  const handleToggleEtudiant = (idEtudiant) => {
+    setSelectedEtudiants(prev =>
+      prev.includes(idEtudiant)
+        ? prev.filter(id => id !== idEtudiant)
+        : [...prev, idEtudiant]
+    );
   };
 
   const handleAssignFormateur = async () => {
@@ -84,7 +92,7 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
     try {
       await espacesPedagogiquesAPI.assignerFormateur(espace.id_espace, selectedFormateur);
       setSuccess('Formateur assigné avec succès !');
-      
+
       setTimeout(() => {
         onSuccess();
       }, 1500);
@@ -110,7 +118,7 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
       await espacesPedagogiquesAPI.ajouterEtudiants(espace.id_espace, selectedEtudiants);
       setSuccess(`${selectedEtudiants.length} étudiant(s) ajouté(s) avec succès !`);
       setSelectedEtudiants([]);
-      
+
       setTimeout(() => {
         onSuccess();
       }, 1500);
@@ -199,7 +207,7 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
               <Users size={16} />
               Ajouter des étudiants ({selectedEtudiants.length} sélectionné(s))
             </label>
-            
+
             {/* Champ de recherche */}
             <div style={{ marginBottom: '1rem' }}>
               <input
@@ -243,12 +251,12 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
                 </div>
               </div>
             )}
-            
+
             {/* Liste des étudiants disponibles pour sélection */}
-            <div style={{ 
-              maxHeight: '200px', 
-              overflowY: 'auto', 
-              border: '1px solid #d1d5db', 
+            <div style={{
+              maxHeight: '200px',
+              overflowY: 'auto',
+              border: '1px solid #d1d5db',
               borderRadius: '6px',
               padding: '0.5rem'
             }}>
@@ -262,9 +270,9 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
                     marginBottom: '0.5rem',
                     borderRadius: '4px'
                   }}>
-                    <label style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
                       fontWeight: '500'
@@ -284,53 +292,77 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
                       Tout sélectionner ({filteredEtudiants.length} étudiants)
                     </label>
                   </div>
-                  
+
                   {/* Liste des étudiants */}
-                  {filteredEtudiants.map((etudiant) => (
-                    <div 
-                      key={etudiant.id_etudiant}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '0.5rem',
-                        borderBottom: '1px solid #f3f4f6',
-                        cursor: 'pointer',
-                        backgroundColor: selectedEtudiants.includes(etudiant.id_etudiant) ? '#eff6ff' : 'transparent',
-                        borderRadius: '4px',
-                        margin: '0.25rem 0'
-                      }}
-                      onClick={() => handleToggleEtudiant(etudiant.id_etudiant)}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedEtudiants.includes(etudiant.id_etudiant)}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleToggleEtudiant(etudiant.id_etudiant);
+                  {filteredEtudiants.map((etudiant) => {
+                    const isSelected = selectedEtudiants.includes(etudiant.id_etudiant);
+                    return (
+                      <div
+                        key={etudiant.id_etudiant}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0.875rem 1rem',
+                          borderBottom: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                          borderRadius: '8px',
+                          margin: '0.4rem 0',
+                          transition: 'all 0.2s ease',
+                          border: isSelected ? '1px solid var(--accent-color)' : '1px solid transparent',
+                          boxShadow: isSelected ? '0 2px 4px rgba(0,0,0,0.05)' : 'none'
                         }}
-                        style={{ marginRight: '0.75rem' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>
-                          {etudiant.prenom} {etudiant.nom}
+                        onClick={() => handleToggleEtudiant(etudiant.id_etudiant)}
+                        className="student-selection-item"
+                        onMouseEnter={(e) => {
+                          if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.03)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '6px',
+                          border: `2px solid ${isSelected ? 'var(--accent-color)' : '#d1d5db'}`,
+                          backgroundColor: isSelected ? 'var(--accent-color)' : 'transparent',
+                          marginRight: '1rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'all 0.2s ease',
+                          flexShrink: 0
+                        }}>
+                          {isSelected && <Plus size={16} color="white" />}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                          {etudiant.email}
-                          {etudiant.matricule && ` • ${etudiant.matricule}`}
+
+                        <div style={{ flex: 1 }}>
+                          <div style={{
+                            fontWeight: isSelected ? '600' : '500',
+                            fontSize: '0.9375rem',
+                            color: 'var(--text-primary)'
+                          }}>
+                            {etudiant.prenom} {etudiant.nom}
+                          </div>
+                          <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                            {etudiant.email}
+                            {etudiant.matricule && ` • ${etudiant.matricule}`}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </>
               ) : (
-                <div style={{ 
-                  textAlign: 'center', 
-                  color: '#6b7280', 
+                <div style={{
+                  textAlign: 'center',
+                  color: '#6b7280',
                   padding: '2rem',
                   fontSize: '0.875rem'
                 }}>
-                  {searchTerm ? 
-                    `Aucun étudiant trouvé pour "${searchTerm}"` : 
+                  {searchTerm ?
+                    `Aucun étudiant trouvé pour "${searchTerm}"` :
                     'Aucun étudiant disponible dans cette promotion'
                   }
                 </div>
@@ -344,8 +376,8 @@ const ManageEspace = ({ espace, onClose, onSuccess }) => {
                 className="btn btn-primary"
                 onClick={handleAddEtudiants}
                 disabled={loading}
-                style={{ 
-                  marginTop: '1rem', 
+                style={{
+                  marginTop: '1rem',
                   width: '100%',
                   padding: '0.75rem',
                   fontSize: '0.875rem',
